@@ -6,6 +6,11 @@
   <meta name="theme-color" content="#0f172a">
   <title>Calculadora de Probabilidades</title>
   <link rel="manifest" href="manifest.json">
+  
+  <!-- KaTeX CSS y JS para renderizar fórmulas matemáticas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: #0b1120; color: #f8fafc; display: flex; justify-content: center; min-height: 100vh; padding: 12px; }
@@ -32,11 +37,24 @@
 
     /* Modal de ayuda */
     .modal-backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(2px); justify-content: center; align-items: center; padding: 16px; z-index: 99; }
-    .modal-box { background: #1e293b; border: 1px solid #334155; border-radius: 12px; max-width: 440px; width: 100%; padding: 18px; max-height: 80vh; overflow-y: auto; color: #cbd5e1; }
+    .modal-box { background: #1e293b; border: 1px solid #334155; border-radius: 12px; max-width: 440px; width: 100%; padding: 18px; max-height: 85vh; overflow-y: auto; color: #cbd5e1; }
     .modal-title { font-size: 1.1rem; color: #38bdf8; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
     .modal-close { background: transparent; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer; }
     .modal-content p { font-size: 0.85rem; line-height: 1.4; margin-bottom: 8px; }
-    .modal-formula { background: #0f172a; padding: 8px; border-radius: 6px; font-family: monospace; font-size: 0.8rem; color: #facc15; margin: 6px 0 10px; word-break: break-all; }
+    
+    .formula-container { 
+      background: #0f172a; 
+      padding: 12px; 
+      border-radius: 8px; 
+      margin: 8px 0 12px; 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      overflow-x: auto;
+      border: 1px solid #334155;
+    }
+    .katex { font-size: 1.1rem; color: #facc15; }
+    .katex-display { margin: 0 !important; }
   </style>
 </head>
 <body>
@@ -107,59 +125,58 @@
 </div>
 
 <script>
-  // Base teórica para el botón "?"
+  // Fórmulas escritas en sintaxis LaTeX pura
   const INFO_DIST = {
     binom: {
       name: "Distribución Binomial",
-      desc: "Modela el número de éxitos k al repetir n ensayos de Bernoulli independientes con probabilidad constante de éxito p.",
-      formula: "P(X = k) = (n! / (k!(n-k)!)) · p^k · (1-p)^(n-k)",
-      moments: "E[X] = n·p  |  Var(X) = n·p·(1-p)"
+      desc: "Modela la cantidad de éxitos al repetir n ensayos de Bernoulli independientes con probabilidad constante de éxito p.",
+      formula: "P(X = k) = \\binom{n}{k} p^k (1-p)^{n-k}",
+      moments: "E[X] = np \\quad | \\quad \\text{Var}(X) = np(1-p)"
     },
     poisson: {
       name: "Distribución de Poisson",
-      desc: "Modela la cantidad de eventos raros que ocurren en un intervalo continuo fijo (tiempo, área, volumen) a una tasa promedio constante λ.",
-      formula: "P(X = k) = (e^(-λ) · λ^k) / k!",
-      moments: "E[X] = λ  |  Var(X) = λ"
+      desc: "Modela la cantidad de eventos que ocurren en un intervalo continuo fijo a una tasa promedio constante λ.",
+      formula: "P(X = k) = \\frac{e^{-\\lambda} \\lambda^k}{k!}",
+      moments: "E[X] = \\lambda \\quad | \\quad \\text{Var}(X) = \\lambda"
     },
     nbinom: {
       name: "Binomial Negativa",
-      desc: "Modela el número de fracasos k antes de obtener r éxitos en ensayos independientes de Bernoulli con probabilidad de éxito p.",
-      formula: "P(X = k) = ((k+r-1)! / (k!(r-1)!)) · p^r · (1-p)^k",
-      moments: "E[X] = r·(1-p)/p  |  Var(X) = r·(1-p)/p^2"
+      desc: "Modela la cantidad de fracasos k antes de conseguir exactamente r éxitos en ensayos de Bernoulli independientes.",
+      formula: "P(X = k) = \\binom{k + r - 1}{k} p^r (1-p)^k",
+      moments: "E[X] = \\frac{r(1-p)}{p} \\quad | \\quad \\text{Var}(X) = \\frac{r(1-p)}{p^2}"
     },
     geom: {
       name: "Distribución Geométrica",
-      desc: "Modela el número de fracasos k antes del primer éxito (definición con soporte {0, 1, 2...}). Posee la propiedad de falta de memoria.",
-      formula: "P(X = k) = (1 - p)^k · p",
-      moments: "E[X] = (1-p)/p  |  Var(X) = (1-p)/p^2"
+      desc: "Modela el número de fracasos k antes del primer éxito (definición con soporte {0, 1, 2...}).",
+      formula: "P(X = k) = (1 - p)^k p",
+      moments: "E[X] = \\frac{1-p}{p} \\quad | \\quad \\text{Var}(X) = \\frac{1-p}{p^2}"
     },
     hyper: {
       name: "Distribución Hipergeométrica",
-      desc: "Modela extracciones de éxitos k en una muestra n tomada SIN reemplazo de una población N con K elementos de éxito. Los ensayos son dependientes.",
-      formula: "P(X = k) = [C(K, k) · C(N-K, n-k)] / C(N, n)",
-      moments: "E[X] = n·(K/N)  |  Var(X) = n·(K/N)·(1-K/N)·[(N-n)/(N-1)]"
+      desc: "Modela extracciones de éxitos k en una muestra n tomada SIN reemplazo de una población N con K elementos favorables.",
+      formula: "P(X = k) = \\frac{\\binom{K}{k} \\binom{N - K}{n - k}}{\\binom{N}{n}}",
+      moments: "E[X] = n\\frac{K}{N} \\quad | \\quad \\text{Var}(X) = n\\frac{K}{N}\\left(1 - \\frac{K}{N}\\right)\\left(\\frac{N - n}{N - 1}\\right)"
     },
     normal: {
       name: "Distribución Normal (Gauss)",
-      desc: "La distribución continua central en estadística. Modela fenómenos continuos con simetría campana alrededor de su media μ y desvío σ.",
-      formula: "f(x) = (1 / (σ√(2π))) · e^(-(x-μ)² / (2σ²))",
-      moments: "E[X] = μ  |  Var(X) = σ²"
+      desc: "Distribución continua con densidad simétrica en forma de campana en torno a su media μ y dispersión σ.",
+      formula: "f(x) = \\frac{1}{\\sigma \\sqrt{2\\pi}} \\, e^{-\\frac{1}{2}\\left(\\frac{x - \\mu}{\\sigma}\\right)^2}",
+      moments: "E[X] = \\mu \\quad | \\quad \\text{Var}(X) = \\sigma^2"
     },
     expon: {
       name: "Distribución Exponencial",
-      desc: "Modela el tiempo de espera entre eventos sucesivos de un proceso de Poisson con tasa λ > 0. Es la única distribución continua sin memoria.",
-      formula: "f(x) = λ · e^(-λ·x)  (para x ≥ 0)",
-      moments: "E[X] = 1/λ  |  Var(X) = 1/λ²"
+      desc: "Modela el tiempo continuo transcurrido hasta que ocurre el siguiente evento de Poisson con tasa λ > 0.",
+      formula: "f(x) = \\lambda e^{-\\lambda x} \\quad (x \\ge 0)",
+      moments: "E[X] = \\frac{1}{\\lambda} \\quad | \\quad \\text{Var}(X) = \\frac{1}{\\lambda^2}"
     },
     uniform: {
       name: "Uniforme Continua",
-      desc: "Asigna densidad de probabilidad idéntica y constante a todo punto contenido en el intervalo [a, b].",
-      formula: "f(x) = 1 / (b - a)  (para a ≤ x ≤ b)",
-      moments: "E[X] = (a+b)/2  |  Var(X) = (b-a)²/12"
+      desc: "Asigna densidad idéntica y constante a cualquier subintervalo de igual longitud dentro del tramo [a, b].",
+      formula: "f(x) = \\frac{1}{b - a} \\quad (a \\le x \\le b)",
+      moments: "E[X] = \\frac{a + b}{2} \\quad | \\quad \\text{Var}(X) = \\frac{(b - a)^2}{12}"
     }
   };
 
-  // Funciones de aproximación matemática
   function logGamma(x) {
     const cof = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
     let y = x, tmp = x + 5.5;
@@ -170,7 +187,6 @@
   }
 
   function logFact(n) {
-    if (n < 0) return 0;
     if (n <= 1) return 0;
     return logGamma(n + 1);
   }
@@ -180,7 +196,6 @@
     return logFact(n) - logFact(k) - logFact(n - k);
   }
 
-  // Error function para normal CDF
   function erf(x) {
     const a1 =  0.254829592, a2 = -0.284496736, a3 =  1.421413741;
     const a4 = -1.453152027, a5 =  1.061405429, p  =  0.3275911;
@@ -195,13 +210,11 @@
     return 0.5 * (1 + erf((x - mu) / (sigma * Math.sqrt(2))));
   }
 
-  // Configuración de inputs por distribución
   function renderParamInputs() {
     const dist = document.getElementById('select-dist').value;
     const container = document.getElementById('container-params');
     const opSelect = document.getElementById('select-op');
     
-    // Si es continua, P(X=x) es formalmente 0, pero permitimos ver densidad o ajustamos la opción
     if (["normal", "expon", "uniform"].includes(dist)) {
       opSelect.querySelector('option[value="eq"]').text = "Densidad f(x)";
     } else {
@@ -248,7 +261,7 @@
 
     let prob = 0, mean = 0, variance = 0;
     let isDiscrete = !["normal", "expon", "uniform"].includes(dist);
-    let chartData = { type: isDiscrete ? 'discrete' : 'continuous', points: [], selected: [] };
+    let chartData = { type: isDiscrete ? 'discrete' : 'continuous', points: [] };
 
     if (dist === "binom") {
       const n = parseInt(document.getElementById('p_n').value) || 1;
@@ -329,7 +342,6 @@
       else if (op === "ge" || op === "gt") prob = 1 - cdf;
       else prob = (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - mu) / sigma, 2));
 
-      // Puntos para curva
       const minX = mu - 3.8 * sigma;
       const maxX = mu + 3.8 * sigma;
       const step = (maxX - minX) / 80;
@@ -381,7 +393,6 @@
       ];
     }
 
-    // Salidas en interfaz
     const opSym = { eq: '=', le: '≤', ge: '≥', lt: '<', gt: '>' }[op];
     document.getElementById('prob-output').innerText = (isDiscrete || op !== 'eq') 
       ? `P(X ${opSym} ${x}) = ${prob.toFixed(5)}` 
@@ -433,7 +444,6 @@
       const mapX = vx => pad + ((vx - minX) / (maxX - minX)) * (w - pad * 2);
       const mapY = vy => h - pad - (vy / maxY) * (h - pad * 2);
 
-      // Dibujar área sombreada
       ctx.beginPath();
       ctx.moveTo(mapX(data.points[0].x), h - pad);
       data.points.forEach(pt => {
@@ -446,7 +456,6 @@
       ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
       ctx.fill();
 
-      // Dibujar curva completa
       ctx.beginPath();
       ctx.moveTo(mapX(data.points[0].x), mapY(data.points[0].y));
       data.points.forEach(pt => ctx.lineTo(mapX(pt.x), mapY(pt.y)));
@@ -456,7 +465,7 @@
     }
   }
 
-  // Modal Help Handlers
+  // Renderizado dinámico con KaTeX dentro del modal
   const modal = document.getElementById('help-modal');
   document.getElementById('btn-open-help').onclick = () => {
     const dist = document.getElementById('select-dist').value;
@@ -465,15 +474,21 @@
     document.getElementById('modal-body').innerHTML = `
       <p><strong>¿Qué calcula?</strong><br>${info.desc}</p>
       <label>Función de masa / densidad:</label>
-      <div class="modal-formula">${info.formula}</div>
-      <p><strong>Parámetros centrales:</strong><br>${info.moments}</p>
+      <div class="formula-container" id="formula-katex"></div>
+      <label>Esperanza y Varianza:</label>
+      <div class="formula-container" id="moments-katex"></div>
     `;
+
+    if (window.katex) {
+      katex.render(info.formula, document.getElementById('formula-katex'), { displayMode: true, throwOnError: false });
+      katex.render(info.moments, document.getElementById('moments-katex'), { displayMode: true, throwOnError: false });
+    }
     modal.style.display = 'flex';
   };
+
   document.getElementById('btn-close-help').onclick = () => modal.style.display = 'none';
   modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
 
-  // Listeners base
   document.getElementById('select-dist').addEventListener('change', () => {
     renderParamInputs();
     calculate();
