@@ -1,12 +1,13 @@
-const CACHE_NAME = 'prob-calc-v3';
+const CACHE_NAME = 'prob-calc-v3.1';
 const ASSETS = [
   './',
   './index.html',
-  './manifest.json'
+  './manifest.json',
+  'https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css',
+  'https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js'
 ];
 
 self.addEventListener('install', (e) => {
-  // Fuerza al nuevo service worker a activarse inmediatamente
   self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
@@ -14,7 +15,6 @@ self.addEventListener('install', (e) => {
 });
 
 self.addEventListener('activate', (e) => {
-  // Borra automáticamente cualquier versión vieja de caché (v1, v1.1, etc.)
   e.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
