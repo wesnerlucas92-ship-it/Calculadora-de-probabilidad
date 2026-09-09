@@ -7,7 +7,7 @@
   <title>Calculadora de Probabilidades</title>
   <link rel="manifest" href="manifest.json">
   
-  <!-- KaTeX CSS y JS para renderizar fórmulas matemáticas -->
+  <!-- KaTeX CSS y JS para fórmulas matemáticas limpias -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
 
@@ -18,12 +18,12 @@
     
     .header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
     h1 { font-size: 1.2rem; color: #38bdf8; }
-    .btn-help { background: #334155; color: #38bdf8; border: 1px solid #475569; width: 28px; height: 28px; border-radius: 50%; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; }
+    .btn-help { background: #334155; color: #38bdf8; border: 1px solid #475569; width: 30px; height: 30px; border-radius: 50%; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
     .btn-help:active { background: #475569; }
 
     .selector-container { margin-bottom: 12px; }
     label { display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; font-weight: 500; }
-    input, select { width: 100%; padding: 9px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #fff; font-size: 0.9rem; }
+    input, select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #fff; font-size: 0.95rem; }
     input:focus, select:focus { outline: none; border-color: #38bdf8; }
     
     .params-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
@@ -33,27 +33,28 @@
     .result-main { font-size: 1.15rem; font-weight: bold; color: #38bdf8; margin-bottom: 6px; }
     .result-sub { font-size: 0.8rem; color: #94a3b8; display: flex; justify-content: space-between; }
     
-    canvas { width: 100%; height: 190px; background: #0f172a; border-radius: 8px; }
+    .canvas-container { position: relative; width: 100%; }
+    canvas { width: 100%; height: 210px; background: #0f172a; border-radius: 8px; touch-action: none; cursor: crosshair; }
 
     /* Modal de ayuda */
-    .modal-backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(2px); justify-content: center; align-items: center; padding: 16px; z-index: 99; }
+    .modal-backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); backdrop-filter: blur(2px); justify-content: center; align-items: center; padding: 16px; z-index: 99; }
     .modal-box { background: #1e293b; border: 1px solid #334155; border-radius: 12px; max-width: 440px; width: 100%; padding: 18px; max-height: 85vh; overflow-y: auto; color: #cbd5e1; }
-    .modal-title { font-size: 1.1rem; color: #38bdf8; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
-    .modal-close { background: transparent; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer; }
-    .modal-content p { font-size: 0.85rem; line-height: 1.4; margin-bottom: 8px; }
+    .modal-title { font-size: 1.1rem; color: #38bdf8; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .modal-close { background: transparent; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; line-height: 1; }
+    .modal-content p { font-size: 0.85rem; line-height: 1.45; margin-bottom: 8px; }
     
     .formula-container { 
       background: #0f172a; 
       padding: 12px; 
       border-radius: 8px; 
-      margin: 8px 0 12px; 
+      margin: 6px 0 12px; 
       display: flex; 
       justify-content: center; 
       align-items: center; 
       overflow-x: auto;
       border: 1px solid #334155;
     }
-    .katex { font-size: 1.1rem; color: #facc15; }
+    .katex { font-size: 1.05rem; color: #facc15; }
     .katex-display { margin: 0 !important; }
   </style>
 </head>
@@ -110,7 +111,9 @@
     </div>
   </div>
 
-  <canvas id="chart"></canvas>
+  <div class="canvas-container">
+    <canvas id="chart"></canvas>
+  </div>
 </div>
 
 <!-- Modal descriptivo -->
@@ -125,7 +128,6 @@
 </div>
 
 <script>
-  // Fórmulas escritas en sintaxis LaTeX pura
   const INFO_DIST = {
     binom: {
       name: "Distribución Binomial",
@@ -147,7 +149,7 @@
     },
     geom: {
       name: "Distribución Geométrica",
-      desc: "Modela el número de fracasos k antes del primer éxito (definición con soporte {0, 1, 2...}).",
+      desc: "Modela el número de fracasos k antes del primer éxito (soporte {0, 1, 2...}).",
       formula: "P(X = k) = (1 - p)^k p",
       moments: "E[X] = \\frac{1-p}{p} \\quad | \\quad \\text{Var}(X) = \\frac{1-p}{p^2}"
     },
@@ -159,19 +161,19 @@
     },
     normal: {
       name: "Distribución Normal (Gauss)",
-      desc: "Distribución continua con densidad simétrica en forma de campana en torno a su media μ y dispersión σ.",
+      desc: "Distribución continua simétrica en forma de campana en torno a su media μ y desvío estándar σ.",
       formula: "f(x) = \\frac{1}{\\sigma \\sqrt{2\\pi}} \\, e^{-\\frac{1}{2}\\left(\\frac{x - \\mu}{\\sigma}\\right)^2}",
       moments: "E[X] = \\mu \\quad | \\quad \\text{Var}(X) = \\sigma^2"
     },
     expon: {
       name: "Distribución Exponencial",
-      desc: "Modela el tiempo continuo transcurrido hasta que ocurre el siguiente evento de Poisson con tasa λ > 0.",
+      desc: "Modela el tiempo continuo transcurrido hasta el próximo evento en un proceso de Poisson con tasa λ > 0.",
       formula: "f(x) = \\lambda e^{-\\lambda x} \\quad (x \\ge 0)",
       moments: "E[X] = \\frac{1}{\\lambda} \\quad | \\quad \\text{Var}(X) = \\frac{1}{\\lambda^2}"
     },
     uniform: {
       name: "Uniforme Continua",
-      desc: "Asigna densidad idéntica y constante a cualquier subintervalo de igual longitud dentro del tramo [a, b].",
+      desc: "Distribución continua que asigna probabilidad idéntica a subintervalos de igual longitud contenidos en [a, b].",
       formula: "f(x) = \\frac{1}{b - a} \\quad (a \\le x \\le b)",
       moments: "E[X] = \\frac{a + b}{2} \\quad | \\quad \\text{Var}(X) = \\frac{(b - a)^2}{12}"
     }
@@ -197,8 +199,8 @@
   }
 
   function erf(x) {
-    const a1 =  0.254829592, a2 = -0.284496736, a3 =  1.421413741;
-    const a4 = -1.453152027, a5 =  1.061405429, p  =  0.3275911;
+    const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741;
+    const a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
     const sign = x < 0 ? -1 : 1;
     x = Math.abs(x);
     const t = 1.0 / (1.0 + p * x);
@@ -254,6 +256,17 @@
     container.querySelectorAll('input').forEach(i => i.addEventListener('input', calculate));
   }
 
+  let currentChartState = null;
+
+  function evalCond(val, target, op) {
+    if (op === 'eq') return Math.abs(val - target) < 1e-5;
+    if (op === 'le') return val <= target;
+    if (op === 'ge') return val >= target;
+    if (op === 'lt') return val < target;
+    if (op === 'gt') return val > target;
+    return false;
+  }
+
   function calculate() {
     const dist = document.getElementById('select-dist').value;
     const op = document.getElementById('select-op').value;
@@ -261,13 +274,15 @@
 
     let prob = 0, mean = 0, variance = 0;
     let isDiscrete = !["normal", "expon", "uniform"].includes(dist);
-    let chartData = { type: isDiscrete ? 'discrete' : 'continuous', points: [] };
+    let chartData = { type: isDiscrete ? 'discrete' : 'continuous', points: [], minX: 0, maxX: 1 };
 
     if (dist === "binom") {
       const n = parseInt(document.getElementById('p_n').value) || 1;
       const p = parseFloat(document.getElementById('p_p').value) || 0;
       mean = n * p;
       variance = n * p * (1 - p);
+      chartData.minX = 0;
+      chartData.maxX = n;
 
       for (let k = 0; k <= n; k++) {
         const p_k = Math.exp(logComb(n, k) + k * Math.log(p || 1e-10) + (n - k) * Math.log((1 - p) || 1e-10));
@@ -279,7 +294,9 @@
       const l = parseFloat(document.getElementById('p_lambda').value) || 1;
       mean = l;
       variance = l;
-      const maxK = Math.max(Math.ceil(l + 4 * Math.sqrt(l)), Math.ceil(x) + 5, 15);
+      const maxK = Math.max(Math.ceil(l + 4 * Math.sqrt(l)), Math.ceil(x || 0) + 5, 15);
+      chartData.minX = 0;
+      chartData.maxX = maxK;
 
       for (let k = 0; k <= maxK; k++) {
         const p_k = Math.exp(-l + k * Math.log(l) - logFact(k));
@@ -292,7 +309,9 @@
       const p = parseFloat(document.getElementById('p_p').value) || 0.5;
       mean = (r * (1 - p)) / p;
       variance = (r * (1 - p)) / (p * p);
-      const maxK = Math.max(Math.ceil(mean + 3 * Math.sqrt(variance)), Math.ceil(x) + 5, 20);
+      const maxK = Math.max(Math.ceil(mean + 3 * Math.sqrt(variance)), Math.ceil(x || 0) + 5, 20);
+      chartData.minX = 0;
+      chartData.maxX = maxK;
 
       for (let k = 0; k <= maxK; k++) {
         const p_k = Math.exp(logComb(k + r - 1, k) + r * Math.log(p) + k * Math.log(1 - p));
@@ -304,7 +323,9 @@
       const p = parseFloat(document.getElementById('p_p').value) || 0.5;
       mean = (1 - p) / p;
       variance = (1 - p) / (p * p);
-      const maxK = Math.max(Math.ceil(mean + 4 * Math.sqrt(variance)), Math.ceil(x) + 5, 15);
+      const maxK = Math.max(Math.ceil(mean + 4 * Math.sqrt(variance)), Math.ceil(x || 0) + 5, 15);
+      chartData.minX = 0;
+      chartData.maxX = maxK;
 
       for (let k = 0; k <= maxK; k++) {
         const p_k = Math.pow(1 - p, k) * p;
@@ -318,6 +339,8 @@
       const n = parseInt(document.getElementById('p_n').value) || 5;
       mean = (n * K) / N;
       variance = n * (K / N) * (1 - K / N) * ((N - n) / (N - 1 || 1));
+      chartData.minX = 0;
+      chartData.maxX = n;
 
       const minK = Math.max(0, n - (N - K));
       const maxK = Math.min(n, K);
@@ -342,10 +365,10 @@
       else if (op === "ge" || op === "gt") prob = 1 - cdf;
       else prob = (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - mu) / sigma, 2));
 
-      const minX = mu - 3.8 * sigma;
-      const maxX = mu + 3.8 * sigma;
-      const step = (maxX - minX) / 80;
-      for (let v = minX; v <= maxX; v += step) {
+      chartData.minX = mu - 3.8 * sigma;
+      chartData.maxX = mu + 3.8 * sigma;
+      const step = (chartData.maxX - chartData.minX) / 120;
+      for (let v = chartData.minX; v <= chartData.maxX; v += step) {
         const density = (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((v - mu) / sigma, 2));
         chartData.points.push({ x: v, y: density });
       }
@@ -363,9 +386,10 @@
         else prob = l * Math.exp(-l * x);
       }
 
-      const maxX = 4 / l;
-      const step = maxX / 80;
-      for (let v = 0; v <= maxX; v += step) {
+      chartData.minX = 0;
+      chartData.maxX = 4.5 / l;
+      const step = chartData.maxX / 120;
+      for (let v = 0; v <= chartData.maxX; v += step) {
         chartData.points.push({ x: v, y: l * Math.exp(-l * v) });
       }
     }
@@ -384,12 +408,18 @@
         else prob = 1 / (b - a);
       }
 
-      const pad = (b - a) * 0.2;
+      const h_dens = 1 / (b - a);
+      const span = b - a;
+      chartData.minX = a - span * 0.25;
+      chartData.maxX = b + span * 0.25;
+
       chartData.points = [
-        { x: a - pad, y: 0 },
-        { x: a, y: 1 / (b - a) },
-        { x: b, y: 1 / (b - a) },
-        { x: b + pad, y: 0 }
+        { x: chartData.minX, y: 0 },
+        { x: a, y: 0 },
+        { x: a, y: h_dens },
+        { x: b, y: h_dens },
+        { x: b, y: 0 },
+        { x: chartData.maxX, y: 0 }
       ];
     }
 
@@ -400,19 +430,10 @@
     document.getElementById('mean-output').innerText = `E[X] = ${mean.toFixed(2)}`;
     document.getElementById('var-output').innerText = `Var(X) = ${variance.toFixed(2)}`;
 
-    draw(chartData, x, op, isDiscrete);
+    draw(chartData, x, op, isDiscrete, dist);
   }
 
-  function evalCond(val, target, op) {
-    if (op === 'eq') return Math.abs(val - target) < 1e-6;
-    if (op === 'le') return val <= target;
-    if (op === 'ge') return val >= target;
-    if (op === 'lt') return val < target;
-    if (op === 'gt') return val > target;
-    return false;
-  }
-
-  function draw(data, targetX, op, isDiscrete) {
+  function draw(data, targetX, op, isDiscrete, distKey) {
     const canvas = document.getElementById('chart');
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
@@ -424,83 +445,28 @@
     const h = canvas.clientHeight;
     ctx.clearRect(0, 0, w, h);
 
-    if (data.points.length === 0) return;
+    if (!data.points || data.points.length === 0) return;
 
-    const maxY = Math.max(...data.points.map(p => p.y), 0.05);
-    const pad = 16;
+    const padLeft = 46;
+    const padRight = 18;
+    const padTop = 18;
+    const padBottom = 34;
 
-    if (isDiscrete) {
-      const barW = (w - pad * 2) / data.points.length;
-      data.points.forEach(pt => {
-        const barH = (pt.y / maxY) * (h - pad * 2);
-        const x = pad + pt.x * barW;
-        const y = h - pad - barH;
-        ctx.fillStyle = evalCond(pt.x, targetX, op) ? '#38bdf8' : '#334155';
-        ctx.fillRect(x + 1, y, Math.max(barW - 2, 2), barH);
-      });
-    } else {
-      const minX = data.points[0].x;
-      const maxX = data.points[data.points.length - 1].x;
-      const mapX = vx => pad + ((vx - minX) / (maxX - minX)) * (w - pad * 2);
-      const mapY = vy => h - pad - (vy / maxY) * (h - pad * 2);
+    const plotW = w - padLeft - padRight;
+    const plotH = h - padTop - padBottom;
 
-      ctx.beginPath();
-      ctx.moveTo(mapX(data.points[0].x), h - pad);
-      data.points.forEach(pt => {
-        if (evalCond(pt.x, targetX, op)) {
-          ctx.lineTo(mapX(pt.x), mapY(pt.y));
-        } else {
-          ctx.lineTo(mapX(pt.x), h - pad);
-        }
-      });
-      ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
-      ctx.fill();
+    const maxY = Math.max(...data.points.map(p => p.y), 0.001) * 1.18;
+    const minX = data.minX;
+    const maxX = data.maxX;
 
-      ctx.beginPath();
-      ctx.moveTo(mapX(data.points[0].x), mapY(data.points[0].y));
-      data.points.forEach(pt => ctx.lineTo(mapX(pt.x), mapY(pt.y)));
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-  }
+    const mapX = vx => padLeft + ((vx - minX) / (maxX - minX)) * plotW;
+    const mapY = vy => padTop + plotH - (vy / maxY) * plotH;
 
-  // Renderizado dinámico con KaTeX dentro del modal
-  const modal = document.getElementById('help-modal');
-  document.getElementById('btn-open-help').onclick = () => {
-    const dist = document.getElementById('select-dist').value;
-    const info = INFO_DIST[dist];
-    document.getElementById('modal-dist-name').innerText = info.name;
-    document.getElementById('modal-body').innerHTML = `
-      <p><strong>¿Qué calcula?</strong><br>${info.desc}</p>
-      <label>Función de masa / densidad:</label>
-      <div class="formula-container" id="formula-katex"></div>
-      <label>Esperanza y Varianza:</label>
-      <div class="formula-container" id="moments-katex"></div>
-    `;
+    currentChartState = { isDiscrete, minX, maxX, padLeft, plotW };
 
-    if (window.katex) {
-      katex.render(info.formula, document.getElementById('formula-katex'), { displayMode: true, throwOnError: false });
-      katex.render(info.moments, document.getElementById('moments-katex'), { displayMode: true, throwOnError: false });
-    }
-    modal.style.display = 'flex';
-  };
-
-  document.getElementById('btn-close-help').onclick = () => modal.style.display = 'none';
-  modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
-
-  document.getElementById('select-dist').addEventListener('change', () => {
-    renderParamInputs();
-    calculate();
-  });
-  document.getElementById('select-op').addEventListener('change', calculate);
-  document.getElementById('input-x').addEventListener('input', calculate);
-
-  window.addEventListener('load', () => {
-    renderParamInputs();
-    calculate();
-    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
-  });
-</script>
-</body>
-</html>
+    // Ejes cartesianos
+    ctx.strokeStyle = '#475569';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padLeft, padTop);
+ 
