@@ -3,147 +3,408 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#1e293b">
-  <title>Calculadora Binomial</title>
+  <meta name="theme-color" content="#0f172a">
+  <title>Calculadora de Probabilidades</title>
   <link rel="manifest" href="manifest.json">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: #0f172a; color: #f8fafc; display: flex; justify-content: center; min-height: 100vh; padding: 16px; }
-    .app-card { width: 100%; max-width: 440px; background: #1e293b; border-radius: 16px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
-    h1 { font-size: 1.25rem; text-align: center; margin-bottom: 16px; color: #38bdf8; }
-    .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-    .full-width { grid-column: span 2; }
-    label { display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; }
-    input, select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #fff; font-size: 0.95rem; }
+    body { background-color: #0b1120; color: #f8fafc; display: flex; justify-content: center; min-height: 100vh; padding: 12px; }
+    .app-card { width: 100%; max-width: 480px; background: #1e293b; border-radius: 16px; padding: 18px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    
+    .header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    h1 { font-size: 1.2rem; color: #38bdf8; }
+    .btn-help { background: #334155; color: #38bdf8; border: 1px solid #475569; width: 28px; height: 28px; border-radius: 50%; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; }
+    .btn-help:active { background: #475569; }
+
+    .selector-container { margin-bottom: 12px; }
+    label { display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; font-weight: 500; }
+    input, select { width: 100%; padding: 9px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #fff; font-size: 0.9rem; }
     input:focus, select:focus { outline: none; border-color: #38bdf8; }
-    .results { background: #0f172a; border-radius: 12px; padding: 14px; margin: 16px 0; border-left: 4px solid #38bdf8; }
+    
+    .params-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .full-col { grid-column: span 2; }
+
+    .results { background: #0f172a; border-radius: 10px; padding: 12px; margin: 14px 0; border-left: 4px solid #38bdf8; }
     .result-main { font-size: 1.15rem; font-weight: bold; color: #38bdf8; margin-bottom: 6px; }
     .result-sub { font-size: 0.8rem; color: #94a3b8; display: flex; justify-content: space-between; }
-    canvas { width: 100%; height: 180px; background: #0f172a; border-radius: 8px; margin-top: 8px; }
+    
+    canvas { width: 100%; height: 190px; background: #0f172a; border-radius: 8px; }
+
+    /* Modal de ayuda */
+    .modal-backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(2px); justify-content: center; align-items: center; padding: 16px; z-index: 99; }
+    .modal-box { background: #1e293b; border: 1px solid #334155; border-radius: 12px; max-width: 440px; width: 100%; padding: 18px; max-height: 80vh; overflow-y: auto; color: #cbd5e1; }
+    .modal-title { font-size: 1.1rem; color: #38bdf8; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .modal-close { background: transparent; border: none; color: #94a3b8; font-size: 1.4rem; cursor: pointer; }
+    .modal-content p { font-size: 0.85rem; line-height: 1.4; margin-bottom: 8px; }
+    .modal-formula { background: #0f172a; padding: 8px; border-radius: 6px; font-family: monospace; font-size: 0.8rem; color: #facc15; margin: 6px 0 10px; word-break: break-all; }
   </style>
 </head>
 <body>
 
 <div class="app-card">
-  <h1>Calculadora Binomial</h1>
+  <div class="header-row">
+    <h1>Calculadora de Probabilidades</h1>
+    <button class="btn-help" id="btn-open-help" title="Ver explicación">?</button>
+  </div>
 
-  <div class="input-grid">
+  <div class="selector-container">
+    <label for="select-dist">Distribución de Probabilidad</label>
+    <select id="select-dist">
+      <optgroup label="Discretas">
+        <option value="binom" selected>Binomial</option>
+        <option value="poisson">Poisson</option>
+        <option value="nbinom">Binomial Negativa</option>
+        <option value="geom">Geométrica</option>
+        <option value="hyper">Hipergeométrica</option>
+      </optgroup>
+      <optgroup label="Continuas">
+        <option value="normal">Normal</option>
+        <option value="expon">Exponencial</option>
+        <option value="uniform">Uniforme Continua</option>
+      </optgroup>
+    </select>
+  </div>
+
+  <div class="params-grid" id="container-params"></div>
+
+  <div class="params-grid">
     <div>
-      <label for="input-n">Ensayos (n)</label>
-      <input type="number" id="input-n" value="20" min="1" max="500">
-    </div>
-    <div>
-      <label for="input-p">Probabilidad éxito (p)</label>
-      <input type="number" id="input-p" value="0.35" min="0" max="1" step="0.01">
-    </div>
-    <div>
-      <label for="select-op">Tipo de cálculo</label>
+      <label for="select-op">Evento</label>
       <select id="select-op">
-        <option value="eq">P(X = k)</option>
-        <option value="le" selected>P(X ≤ k)</option>
-        <option value="ge">P(X ≥ k)</option>
-        <option value="lt">P(X &lt; k)</option>
-        <option value="gt">P(X &gt; k)</option>
+        <option value="le">P(X ≤ x)</option>
+        <option value="lt">P(X &lt; x)</option>
+        <option value="ge">P(X ≥ x)</option>
+        <option value="gt">P(X &gt; x)</option>
+        <option value="eq">P(X = x)</option>
       </select>
     </div>
     <div>
-      <label for="input-k">Éxitos (k)</label>
-      <input type="number" id="input-k" value="7" min="0" max="20">
+      <label for="input-x" id="label-x">Valor (x)</label>
+      <input type="number" id="input-x" value="7" step="any">
     </div>
   </div>
 
   <div class="results">
-    <div id="prob-output" class="result-main">Calculando...</div>
+    <div id="prob-output" class="result-main">P = ...</div>
     <div class="result-sub">
-      <span id="mean-output">E[X] = 0</span>
-      <span id="var-output">Var(X) = 0</span>
+      <span id="mean-output">E[X] = -</span>
+      <span id="var-output">Var(X) = -</span>
     </div>
   </div>
 
   <canvas id="chart"></canvas>
 </div>
 
+<!-- Modal descriptivo -->
+<div class="modal-backdrop" id="help-modal">
+  <div class="modal-box">
+    <div class="modal-title">
+      <span id="modal-dist-name">Distribución</span>
+      <button class="modal-close" id="btn-close-help">&times;</button>
+    </div>
+    <div class="modal-content" id="modal-body"></div>
+  </div>
+</div>
+
 <script>
-  // Log-gamma para aproximar factoriales sin overflow: ln(n!) = lngamma(n + 1)
-  function logGamma(x) {
-    const p = [
-      676.5203681218851, -1259.1392167224028, 771.32342877765313,
-      -176.61502916214059, 12.507343278686905, -0.138571095856205,
-      9.9843695780195716e-6, 1.5056327351493116e-7
-    ];
-    let y = x;
-    let tmp = x + 7.5;
-    tmp -= (x + 0.5) * Math.log(tmp);
-    let ser = 0.99999999999980993;
-    for (let j = 0; j < p.length; j++) {
-      y += 1;
-      ser += p[j] / y;
+  // Base teórica para el botón "?"
+  const INFO_DIST = {
+    binom: {
+      name: "Distribución Binomial",
+      desc: "Modela el número de éxitos k al repetir n ensayos de Bernoulli independientes con probabilidad constante de éxito p.",
+      formula: "P(X = k) = (n! / (k!(n-k)!)) · p^k · (1-p)^(n-k)",
+      moments: "E[X] = n·p  |  Var(X) = n·p·(1-p)"
+    },
+    poisson: {
+      name: "Distribución de Poisson",
+      desc: "Modela la cantidad de eventos raros que ocurren en un intervalo continuo fijo (tiempo, área, volumen) a una tasa promedio constante λ.",
+      formula: "P(X = k) = (e^(-λ) · λ^k) / k!",
+      moments: "E[X] = λ  |  Var(X) = λ"
+    },
+    nbinom: {
+      name: "Binomial Negativa",
+      desc: "Modela el número de fracasos k antes de obtener r éxitos en ensayos independientes de Bernoulli con probabilidad de éxito p.",
+      formula: "P(X = k) = ((k+r-1)! / (k!(r-1)!)) · p^r · (1-p)^k",
+      moments: "E[X] = r·(1-p)/p  |  Var(X) = r·(1-p)/p^2"
+    },
+    geom: {
+      name: "Distribución Geométrica",
+      desc: "Modela el número de fracasos k antes del primer éxito (definición con soporte {0, 1, 2...}). Posee la propiedad de falta de memoria.",
+      formula: "P(X = k) = (1 - p)^k · p",
+      moments: "E[X] = (1-p)/p  |  Var(X) = (1-p)/p^2"
+    },
+    hyper: {
+      name: "Distribución Hipergeométrica",
+      desc: "Modela extracciones de éxitos k en una muestra n tomada SIN reemplazo de una población N con K elementos de éxito. Los ensayos son dependientes.",
+      formula: "P(X = k) = [C(K, k) · C(N-K, n-k)] / C(N, n)",
+      moments: "E[X] = n·(K/N)  |  Var(X) = n·(K/N)·(1-K/N)·[(N-n)/(N-1)]"
+    },
+    normal: {
+      name: "Distribución Normal (Gauss)",
+      desc: "La distribución continua central en estadística. Modela fenómenos continuos con simetría campana alrededor de su media μ y desvío σ.",
+      formula: "f(x) = (1 / (σ√(2π))) · e^(-(x-μ)² / (2σ²))",
+      moments: "E[X] = μ  |  Var(X) = σ²"
+    },
+    expon: {
+      name: "Distribución Exponencial",
+      desc: "Modela el tiempo de espera entre eventos sucesivos de un proceso de Poisson con tasa λ > 0. Es la única distribución continua sin memoria.",
+      formula: "f(x) = λ · e^(-λ·x)  (para x ≥ 0)",
+      moments: "E[X] = 1/λ  |  Var(X) = 1/λ²"
+    },
+    uniform: {
+      name: "Uniforme Continua",
+      desc: "Asigna densidad de probabilidad idéntica y constante a todo punto contenido en el intervalo [a, b].",
+      formula: "f(x) = 1 / (b - a)  (para a ≤ x ≤ b)",
+      moments: "E[X] = (a+b)/2  |  Var(X) = (b-a)²/12"
     }
+  };
+
+  // Funciones de aproximación matemática
+  function logGamma(x) {
+    const cof = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
+    let y = x, tmp = x + 5.5;
+    tmp -= (x + 0.5) * Math.log(tmp);
+    let ser = 1.000000000190015;
+    for (let j = 0; j <= 5; j++) ser += cof[j] / ++y;
     return -tmp + Math.log(2.5066282746310005 * ser / x);
   }
 
-  function logFactorial(m) {
-    if (m <= 1) return 0;
-    return logGamma(m + 1);
+  function logFact(n) {
+    if (n < 0) return 0;
+    if (n <= 1) return 0;
+    return logGamma(n + 1);
   }
 
-  function binomPMF(k, n, p) {
-    if (k < 0 || k > n) return 0;
-    if (p === 0) return k === 0 ? 1 : 0;
-    if (p === 1) return k === n ? 1 : 0;
-    const logComb = logFactorial(n) - (logFactorial(k) + logFactorial(n - k));
-    return Math.exp(logComb + k * Math.log(p) + (n - k) * Math.log(1 - p));
+  function logComb(n, k) {
+    if (k < 0 || k > n) return -Infinity;
+    return logFact(n) - logFact(k) - logFact(n - k);
   }
 
-  function update() {
-    const n = parseInt(document.getElementById('input-n').value) || 0;
-    const p = parseFloat(document.getElementById('input-p').value) || 0;
-    const k = parseInt(document.getElementById('input-k').value) || 0;
+  // Error function para normal CDF
+  function erf(x) {
+    const a1 =  0.254829592, a2 = -0.284496736, a3 =  1.421413741;
+    const a4 = -1.453152027, a5 =  1.061405429, p  =  0.3275911;
+    const sign = x < 0 ? -1 : 1;
+    x = Math.abs(x);
+    const t = 1.0 / (1.0 + p * x);
+    const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+    return sign * y;
+  }
+
+  function normalCDF(x, mu, sigma) {
+    return 0.5 * (1 + erf((x - mu) / (sigma * Math.sqrt(2))));
+  }
+
+  // Configuración de inputs por distribución
+  function renderParamInputs() {
+    const dist = document.getElementById('select-dist').value;
+    const container = document.getElementById('container-params');
+    const opSelect = document.getElementById('select-op');
+    
+    // Si es continua, P(X=x) es formalmente 0, pero permitimos ver densidad o ajustamos la opción
+    if (["normal", "expon", "uniform"].includes(dist)) {
+      opSelect.querySelector('option[value="eq"]').text = "Densidad f(x)";
+    } else {
+      opSelect.querySelector('option[value="eq"]').text = "P(X = x)";
+    }
+
+    let html = "";
+    if (dist === "binom") {
+      html = `
+        <div><label>Ensayos (n)</label><input type="number" id="p_n" value="20" min="1"></div>
+        <div><label>Probabilidad (p)</label><input type="number" id="p_p" value="0.35" min="0" max="1" step="0.01"></div>`;
+    } else if (dist === "poisson") {
+      html = `<div class="full-col"><label>Tasa media (λ)</label><input type="number" id="p_lambda" value="4" min="0.001" step="0.1"></div>`;
+    } else if (dist === "nbinom") {
+      html = `
+        <div><label>Éxitos requeridos (r)</label><input type="number" id="p_r" value="3" min="1"></div>
+        <div><label>Probabilidad éxito (p)</label><input type="number" id="p_p" value="0.4" min="0.001" max="1" step="0.01"></div>`;
+    } else if (dist === "geom") {
+      html = `<div class="full-col"><label>Probabilidad éxito (p)</label><input type="number" id="p_p" value="0.25" min="0.001" max="1" step="0.01"></div>`;
+    } else if (dist === "hyper") {
+      html = `
+        <div><label>Población (N)</label><input type="number" id="p_N" value="50" min="1"></div>
+        <div><label>Éxitos Población (K)</label><input type="number" id="p_K" value="15" min="0"></div>
+        <div class="full-col"><label>Tamaño Muestra (n)</label><input type="number" id="p_n" value="10" min="1"></div>`;
+    } else if (dist === "normal") {
+      html = `
+        <div><label>Media (μ)</label><input type="number" id="p_mu" value="0" step="any"></div>
+        <div><label>Desvío estándar (σ)</label><input type="number" id="p_sigma" value="1" min="0.001" step="any"></div>`;
+    } else if (dist === "expon") {
+      html = `<div class="full-col"><label>Tasa (λ)</label><input type="number" id="p_lambda" value="1.5" min="0.001" step="any"></div>`;
+    } else if (dist === "uniform") {
+      html = `
+        <div><label>Límite inferior (a)</label><input type="number" id="p_a" value="0" step="any"></div>
+        <div><label>Límite superior (b)</label><input type="number" id="p_b" value="10" step="any"></div>`;
+    }
+    container.innerHTML = html;
+    container.querySelectorAll('input').forEach(i => i.addEventListener('input', calculate));
+  }
+
+  function calculate() {
+    const dist = document.getElementById('select-dist').value;
     const op = document.getElementById('select-op').value;
+    const x = parseFloat(document.getElementById('input-x').value);
 
-    document.getElementById('input-k').max = n;
+    let prob = 0, mean = 0, variance = 0;
+    let isDiscrete = !["normal", "expon", "uniform"].includes(dist);
+    let chartData = { type: isDiscrete ? 'discrete' : 'continuous', points: [], selected: [] };
 
-    // Calcular distribución completa
-    const pmf = [];
-    for (let i = 0; i <= n; i++) {
-      pmf.push(binomPMF(i, n, p));
+    if (dist === "binom") {
+      const n = parseInt(document.getElementById('p_n').value) || 1;
+      const p = parseFloat(document.getElementById('p_p').value) || 0;
+      mean = n * p;
+      variance = n * p * (1 - p);
+
+      for (let k = 0; k <= n; k++) {
+        const p_k = Math.exp(logComb(n, k) + k * Math.log(p || 1e-10) + (n - k) * Math.log((1 - p) || 1e-10));
+        chartData.points.push({ x: k, y: p_k });
+        if (evalCond(k, x, op)) prob += p_k;
+      }
+    } 
+    else if (dist === "poisson") {
+      const l = parseFloat(document.getElementById('p_lambda').value) || 1;
+      mean = l;
+      variance = l;
+      const maxK = Math.max(Math.ceil(l + 4 * Math.sqrt(l)), Math.ceil(x) + 5, 15);
+
+      for (let k = 0; k <= maxK; k++) {
+        const p_k = Math.exp(-l + k * Math.log(l) - logFact(k));
+        chartData.points.push({ x: k, y: p_k });
+        if (evalCond(k, x, op)) prob += p_k;
+      }
+    }
+    else if (dist === "nbinom") {
+      const r = parseInt(document.getElementById('p_r').value) || 1;
+      const p = parseFloat(document.getElementById('p_p').value) || 0.5;
+      mean = (r * (1 - p)) / p;
+      variance = (r * (1 - p)) / (p * p);
+      const maxK = Math.max(Math.ceil(mean + 3 * Math.sqrt(variance)), Math.ceil(x) + 5, 20);
+
+      for (let k = 0; k <= maxK; k++) {
+        const p_k = Math.exp(logComb(k + r - 1, k) + r * Math.log(p) + k * Math.log(1 - p));
+        chartData.points.push({ x: k, y: p_k });
+        if (evalCond(k, x, op)) prob += p_k;
+      }
+    }
+    else if (dist === "geom") {
+      const p = parseFloat(document.getElementById('p_p').value) || 0.5;
+      mean = (1 - p) / p;
+      variance = (1 - p) / (p * p);
+      const maxK = Math.max(Math.ceil(mean + 4 * Math.sqrt(variance)), Math.ceil(x) + 5, 15);
+
+      for (let k = 0; k <= maxK; k++) {
+        const p_k = Math.pow(1 - p, k) * p;
+        chartData.points.push({ x: k, y: p_k });
+        if (evalCond(k, x, op)) prob += p_k;
+      }
+    }
+    else if (dist === "hyper") {
+      const N = parseInt(document.getElementById('p_N').value) || 10;
+      const K = parseInt(document.getElementById('p_K').value) || 5;
+      const n = parseInt(document.getElementById('p_n').value) || 5;
+      mean = (n * K) / N;
+      variance = n * (K / N) * (1 - K / N) * ((N - n) / (N - 1 || 1));
+
+      const minK = Math.max(0, n - (N - K));
+      const maxK = Math.min(n, K);
+
+      for (let k = 0; k <= n; k++) {
+        let p_k = 0;
+        if (k >= minK && k <= maxK) {
+          p_k = Math.exp(logComb(K, k) + logComb(N - K, n - k) - logComb(N, n));
+        }
+        chartData.points.push({ x: k, y: p_k });
+        if (evalCond(k, x, op)) prob += p_k;
+      }
+    }
+    else if (dist === "normal") {
+      const mu = parseFloat(document.getElementById('p_mu').value) || 0;
+      const sigma = parseFloat(document.getElementById('p_sigma').value) || 1;
+      mean = mu;
+      variance = sigma * sigma;
+
+      const cdf = normalCDF(x, mu, sigma);
+      if (op === "le" || op === "lt") prob = cdf;
+      else if (op === "ge" || op === "gt") prob = 1 - cdf;
+      else prob = (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - mu) / sigma, 2));
+
+      // Puntos para curva
+      const minX = mu - 3.8 * sigma;
+      const maxX = mu + 3.8 * sigma;
+      const step = (maxX - minX) / 80;
+      for (let v = minX; v <= maxX; v += step) {
+        const density = (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((v - mu) / sigma, 2));
+        chartData.points.push({ x: v, y: density });
+      }
+    }
+    else if (dist === "expon") {
+      const l = parseFloat(document.getElementById('p_lambda').value) || 1;
+      mean = 1 / l;
+      variance = 1 / (l * l);
+
+      if (x < 0) prob = (op === "le" || op === "lt") ? 0 : 1;
+      else {
+        const cdf = 1 - Math.exp(-l * x);
+        if (op === "le" || op === "lt") prob = cdf;
+        else if (op === "ge" || op === "gt") prob = Math.exp(-l * x);
+        else prob = l * Math.exp(-l * x);
+      }
+
+      const maxX = 4 / l;
+      const step = maxX / 80;
+      for (let v = 0; v <= maxX; v += step) {
+        chartData.points.push({ x: v, y: l * Math.exp(-l * v) });
+      }
+    }
+    else if (dist === "uniform") {
+      const a = parseFloat(document.getElementById('p_a').value) || 0;
+      const b = parseFloat(document.getElementById('p_b').value) || 1;
+      mean = (a + b) / 2;
+      variance = Math.pow(b - a, 2) / 12;
+
+      if (x < a) prob = (op === "le" || op === "lt") ? 0 : 1;
+      else if (x > b) prob = (op === "le" || op === "lt") ? 1 : 0;
+      else {
+        const cdf = (x - a) / (b - a);
+        if (op === "le" || op === "lt") prob = cdf;
+        else if (op === "ge" || op === "gt") prob = 1 - cdf;
+        else prob = 1 / (b - a);
+      }
+
+      const pad = (b - a) * 0.2;
+      chartData.points = [
+        { x: a - pad, y: 0 },
+        { x: a, y: 1 / (b - a) },
+        { x: b, y: 1 / (b - a) },
+        { x: b + pad, y: 0 }
+      ];
     }
 
-    // Evaluar la consulta según la opción
-    let prob = 0;
-    const isSelected = (i) => {
-      if (op === 'eq') return i === k;
-      if (op === 'le') return i <= k;
-      if (op === 'ge') return i >= k;
-      if (op === 'lt') return i < k;
-      if (op === 'gt') return i > k;
-      return false;
-    };
-
-    for (let i = 0; i <= n; i++) {
-      if (isSelected(i)) prob += pmf[i];
-    }
-
-    const mean = n * p;
-    const variance = n * p * (1 - p);
-
-    const labels = {
-      eq: `P(X = ${k})`, le: `P(X ≤ ${k})`, ge: `P(X ≥ ${k})`,
-      lt: `P(X < ${k})`, gt: `P(X > ${k})`
-    };
-
-    document.getElementById('prob-output').innerText = `${labels[op]} = ${prob.toFixed(5)}`;
+    // Salidas en interfaz
+    const opSym = { eq: '=', le: '≤', ge: '≥', lt: '<', gt: '>' }[op];
+    document.getElementById('prob-output').innerText = (isDiscrete || op !== 'eq') 
+      ? `P(X ${opSym} ${x}) = ${prob.toFixed(5)}` 
+      : `f(${x}) = ${prob.toFixed(5)}`;
     document.getElementById('mean-output').innerText = `E[X] = ${mean.toFixed(2)}`;
     document.getElementById('var-output').innerText = `Var(X) = ${variance.toFixed(2)}`;
 
-    drawChart(pmf, isSelected);
+    draw(chartData, x, op, isDiscrete);
   }
 
-  function drawChart(pmf, isSelected) {
+  function evalCond(val, target, op) {
+    if (op === 'eq') return Math.abs(val - target) < 1e-6;
+    if (op === 'le') return val <= target;
+    if (op === 'ge') return val >= target;
+    if (op === 'lt') return val < target;
+    if (op === 'gt') return val > target;
+    return false;
+  }
+
+  function draw(data, targetX, op, isDiscrete) {
     const canvas = document.getElementById('chart');
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
-    
     canvas.width = canvas.clientWidth * dpr;
     canvas.height = canvas.clientHeight * dpr;
     ctx.scale(dpr, dpr);
@@ -152,30 +413,78 @@
     const h = canvas.clientHeight;
     ctx.clearRect(0, 0, w, h);
 
-    const maxP = Math.max(...pmf, 0.05);
-    const padX = 12;
-    const padY = 16;
-    const barWidth = (w - padX * 2) / pmf.length;
+    if (data.points.length === 0) return;
 
-    pmf.forEach((val, i) => {
-      const barH = (val / maxP) * (h - padY * 2);
-      const x = padX + i * barWidth;
-      const y = h - padY - barH;
+    const maxY = Math.max(...data.points.map(p => p.y), 0.05);
+    const pad = 16;
 
-      ctx.fillStyle = isSelected(i) ? '#38bdf8' : '#334155';
-      ctx.fillRect(x + 1, y, Math.max(barWidth - 2, 1), barH);
-    });
+    if (isDiscrete) {
+      const barW = (w - pad * 2) / data.points.length;
+      data.points.forEach(pt => {
+        const barH = (pt.y / maxY) * (h - pad * 2);
+        const x = pad + pt.x * barW;
+        const y = h - pad - barH;
+        ctx.fillStyle = evalCond(pt.x, targetX, op) ? '#38bdf8' : '#334155';
+        ctx.fillRect(x + 1, y, Math.max(barW - 2, 2), barH);
+      });
+    } else {
+      const minX = data.points[0].x;
+      const maxX = data.points[data.points.length - 1].x;
+      const mapX = vx => pad + ((vx - minX) / (maxX - minX)) * (w - pad * 2);
+      const mapY = vy => h - pad - (vy / maxY) * (h - pad * 2);
+
+      // Dibujar área sombreada
+      ctx.beginPath();
+      ctx.moveTo(mapX(data.points[0].x), h - pad);
+      data.points.forEach(pt => {
+        if (evalCond(pt.x, targetX, op)) {
+          ctx.lineTo(mapX(pt.x), mapY(pt.y));
+        } else {
+          ctx.lineTo(mapX(pt.x), h - pad);
+        }
+      });
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
+      ctx.fill();
+
+      // Dibujar curva completa
+      ctx.beginPath();
+      ctx.moveTo(mapX(data.points[0].x), mapY(data.points[0].y));
+      data.points.forEach(pt => ctx.lineTo(mapX(pt.x), mapY(pt.y)));
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
   }
 
-  document.querySelectorAll('input, select').forEach(el => {
-    el.addEventListener('input', update);
+  // Modal Help Handlers
+  const modal = document.getElementById('help-modal');
+  document.getElementById('btn-open-help').onclick = () => {
+    const dist = document.getElementById('select-dist').value;
+    const info = INFO_DIST[dist];
+    document.getElementById('modal-dist-name').innerText = info.name;
+    document.getElementById('modal-body').innerHTML = `
+      <p><strong>¿Qué calcula?</strong><br>${info.desc}</p>
+      <label>Función de masa / densidad:</label>
+      <div class="modal-formula">${info.formula}</div>
+      <p><strong>Parámetros centrales:</strong><br>${info.moments}</p>
+    `;
+    modal.style.display = 'flex';
+  };
+  document.getElementById('btn-close-help').onclick = () => modal.style.display = 'none';
+  modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+
+  // Listeners base
+  document.getElementById('select-dist').addEventListener('change', () => {
+    renderParamInputs();
+    calculate();
   });
+  document.getElementById('select-op').addEventListener('change', calculate);
+  document.getElementById('input-x').addEventListener('input', calculate);
 
   window.addEventListener('load', () => {
-    update();
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js');
-    }
+    renderParamInputs();
+    calculate();
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
   });
 </script>
 </body>
