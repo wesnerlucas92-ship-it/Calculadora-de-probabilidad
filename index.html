@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#1e293b">
+  <title>Calculadora Binomial</title>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #0f172a; color: #f8fafc; display: flex; justify-content: center; min-height: 100vh; padding: 16px; }
+    .app-card { width: 100%; max-width: 440px; background: #1e293b; border-radius: 16px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    h1 { font-size: 1.25rem; text-align: center; margin-bottom: 16px; color: #38bdf8; }
+    .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .full-width { grid-column: span 2; }
+    label { display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; }
+    input, select { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: #fff; font-size: 0.95rem; }
+    input:focus, select:focus { outline: none; border-color: #38bdf8; }
+    .results { background: #0f172a; border-radius: 12px; padding: 14px; margin: 16px 0; border-left: 4px solid #38bdf8; }
+    .result-main { font-size: 1.15rem; font-weight: bold; color: #38bdf8; margin-bottom: 6px; }
+    .result-sub { font-size: 0.8rem; color: #94a3b8; display: flex; justify-content: space-between; }
+    canvas { width: 100%; height: 180px; background: #0f172a; border-radius: 8px; margin-top: 8px; }
+  </style>
+</head>
+<body>
+
+<div class="app-card">
+  <h1>Calculadora Binomial</h1>
+
+  <div class="input-grid">
+    <div>
+      <label for="input-n">Ensayos (n)</label>
+      <input type="number" id="input-n" value="20" min="1" max="500">
+    </div>
+    <div>
+      <label for="input-p">Probabilidad éxito (p)</label>
+      <input type="number" id="input-p" value="0.35" min="0" max="1" step="0.01">
+    </div>
+    <div>
+      <label for="select-op">Tipo de cálculo</label>
+      <select id="select-op">
+        <option value="eq">P(X = k)</option>
+        <option value="le" selected>P(X ≤ k)</option>
+        <option value="ge">P(X ≥ k)</option>
+        <option value="lt">P(X &lt; k)</option>
+        <option value="gt">P(X &gt; k)</option>
+      </select>
+    </div>
+    <div>
+      <label for="input-k">Éxitos (k)</label>
+      <input type="number" id="input-k" value="7" min="0" max="20">
+    </div>
+  </div>
+
+  <div class="results">
+    <div id="prob-output" class="result-main">Calculando...</div>
+    <div class="result-sub">
+      <span id="mean-output">E[X] = 0</span>
+      <span id="var-output">Var(X) = 0</span>
+    </div>
+  </div>
+
+  <canvas id="chart"></canvas>
+</div>
+
+<script>
+  // Log-gamma para aproximar factoriales sin overflow: ln(n!) = lngamma(n + 1)
+  function logGamma(x) {
+    const p = [
+      676.5203681218851, -1259.1392167224028, 771.32342877765313,
+      -176.61502916214059, 12.507343278686905, -0.138571095856205,
+      9.9843695780195716e-6, 1.5056327351493116e-7
+    ];
+    let y = x;
+    let tmp = x + 7.5;
+    tmp -= (x + 0.5) * Math.log(tmp);
+    let ser = 0.99999999999980993;
+    for (let j = 0; j < p.length; j++) {
+      y += 1;
+      ser += p[j] / y;
+    }
+    return -tmp + Math.log(2.5066282746310005 * ser / x);
+  }
+
+  function logFactorial(m) {
+    if (m <= 1) return 0;
+    return logGamma(m + 1);
+  }
+
+  function binomPMF(k, n, p) {
+    if (k < 0 || k > n) return 0;
+    if (p === 0) return k === 0 ? 1 : 0;
+    if (p === 1) return k === n ? 1 : 0;
+    const logComb = logFactorial(n) - (logFactorial(k) + logFactorial(n - k));
+    return Math.exp(logComb + k * Math.log(p) + (n - k) * Math.log(1 - p));
+  }
+
+  function update() {
+    const n = parseInt(document.getElementById('input-n').value) || 0;
+    const p = parseFloat(document.getElementById('input-p').value) || 0;
+    const k = parseInt(document.getElementById('input-k').value) || 0;
+    const op = document.getElementById('select-op').value;
+
+    document.getElementById('input-k').max = n;
+
+    // Calcular distribución completa
+    const pmf = [];
+    for (let i = 0; i <= n; i++) {
+      pmf.push(binomPMF(i, n, p));
+    }
+
+    // Evaluar la consulta según la opción
+    let prob = 0;
+    const isSelected = (i) => {
+      if (op === 'eq') return i === k;
+      if (op === 'le') return i <= k;
+      if (op === 'ge') return i >= k;
+      if (op === 'lt') return i < k;
+      if (op === 'gt') return i > k;
+      return false;
+    };
+
+    for (let i = 0; i <= n; i++) {
+      if (isSelected(i)) prob += pmf[i];
+    }
+
+    const mean = n * p;
+    const variance = n * p * (1 - p);
+
+    const labels = {
+      eq: `P(X = ${k})`, le: `P(X ≤ ${k})`, ge: `P(X ≥ ${k})`,
+      lt: `P(X < ${k})`, gt: `P(X > ${k})`
+    };
+
+    document.getElementById('prob-output').innerText = `${labels[op]} = ${prob.toFixed(5)}`;
+    document.getElementById('mean-output').innerText = `E[X] = ${mean.toFixed(2)}`;
+    document.getElementById('var-output').innerText = `Var(X) = ${variance.toFixed(2)}`;
+
+    drawChart(pmf, isSelected);
+  }
+
+  function drawChart(pmf, isSelected) {
+    const canvas = document.getElementById('chart');
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    
+    canvas.width = canvas.clientWidth * dpr;
+    canvas.height = canvas.clientHeight * dpr;
+    ctx.scale(dpr, dpr);
+
+    const w = canvas.clientWidth;
+    const h = canvas.clientHeight;
+    ctx.clearRect(0, 0, w, h);
+
+    const maxP = Math.max(...pmf, 0.05);
+    const padX = 12;
+    const padY = 16;
+    const barWidth = (w - padX * 2) / pmf.length;
+
+    pmf.forEach((val, i) => {
+      const barH = (val / maxP) * (h - padY * 2);
+      const x = padX + i * barWidth;
+      const y = h - padY - barH;
+
+      ctx.fillStyle = isSelected(i) ? '#38bdf8' : '#334155';
+      ctx.fillRect(x + 1, y, Math.max(barWidth - 2, 1), barH);
+    });
+  }
+
+  document.querySelectorAll('input, select').forEach(el => {
+    el.addEventListener('input', update);
+  });
+
+  window.addEventListener('load', () => {
+    update();
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  });
+</script>
+</body>
+</html>
