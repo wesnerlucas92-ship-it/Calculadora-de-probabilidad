@@ -7,7 +7,7 @@
   <title>Calculadora de Probabilidades</title>
   <link rel="manifest" href="manifest.json">
   
-  <!-- KaTeX CSS y JS -->
+  <!-- KaTeX -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
 
@@ -36,7 +36,6 @@
     .canvas-container { position: relative; width: 100%; }
     canvas { width: 100%; height: 210px; background: #0f172a; border-radius: 8px; touch-action: none; cursor: crosshair; }
 
-    /* Modal de ayuda */
     .modal-backdrop { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); backdrop-filter: blur(2px); justify-content: center; align-items: center; padding: 16px; z-index: 99; }
     .modal-box { background: #1e293b; border: 1px solid #334155; border-radius: 12px; max-width: 440px; width: 100%; padding: 18px; max-height: 85vh; overflow-y: auto; color: #cbd5e1; }
     .modal-title { font-size: 1.1rem; color: #38bdf8; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
@@ -127,7 +126,7 @@
 </div>
 
 <script>
-  const INFO_DIST = {
+  var INFO_DIST = {
     binom: {
       name: "Distribución Binomial",
       desc: "Modela la cantidad de éxitos al repetir n ensayos de Bernoulli independientes con probabilidad constante de éxito p.",
@@ -178,12 +177,19 @@
     }
   };
 
+  function getVal(id, def) {
+    var el = document.getElementById(id);
+    if (!el || el.value === "") return def;
+    var v = parseFloat(el.value);
+    return isNaN(v) ? def : v;
+  }
+
   function logGamma(x) {
-    const cof = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
-    let y = x, tmp = x + 5.5;
+    var cof = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
+    var y = x, tmp = x + 5.5;
     tmp -= (x + 0.5) * Math.log(tmp);
-    let ser = 1.000000000190015;
-    for (let j = 0; j <= 5; j++) ser += cof[j] / ++y;
+    var ser = 1.000000000190015;
+    for (var j = 0; j <= 5; j++) ser += cof[j] / ++y;
     return -tmp + Math.log(2.5066282746310005 * ser / x);
   }
 
@@ -198,12 +204,12 @@
   }
 
   function erf(x) {
-    const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741;
-    const a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
-    const sign = x < 0 ? -1 : 1;
+    var a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741;
+    var a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
+    var sign = x < 0 ? -1 : 1;
     x = Math.abs(x);
-    const t = 1.0 / (1.0 + p * x);
-    const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+    var t = 1.0 / (1.0 + p * x);
+    var y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
     return sign * y;
   }
 
@@ -212,50 +218,49 @@
   }
 
   function renderParamInputs() {
-    const dist = document.getElementById('select-dist').value;
-    const container = document.getElementById('container-params');
-    const opSelect = document.getElementById('select-op');
+    var dist = document.getElementById('select-dist').value;
+    var container = document.getElementById('container-params');
+    var opSelect = document.getElementById('select-op');
     
-    if (["normal", "expon", "uniform"].includes(dist)) {
+    if (dist === "normal" || dist === "expon" || dist === "uniform") {
       opSelect.querySelector('option[value="eq"]').text = "Densidad f(x)";
     } else {
       opSelect.querySelector('option[value="eq"]').text = "P(X = x)";
     }
 
-    let html = "";
+    var html = "";
     if (dist === "binom") {
-      html = `
-        <div><label>Ensayos (n)</label><input type="number" id="p_n" value="20" min="1"></div>
-        <div><label>Probabilidad (p)</label><input type="number" id="p_p" value="0.35" min="0" max="1" step="0.01"></div>`;
+      html = '<div><label>Ensayos (n)</label><input type="number" id="p_n" value="20" min="1"></div>' +
+             '<div><label>Probabilidad (p)</label><input type="number" id="p_p" value="0.35" min="0" max="1" step="0.01"></div>';
     } else if (dist === "poisson") {
-      html = `<div class="full-col"><label>Tasa media (λ)</label><input type="number" id="p_lambda" value="4" min="0.001" step="0.1"></div>`;
+      html = '<div class="full-col"><label>Tasa media (λ)</label><input type="number" id="p_lambda" value="4" min="0.001" step="0.1"></div>';
     } else if (dist === "nbinom") {
-      html = `
-        <div><label>Éxitos requeridos (r)</label><input type="number" id="p_r" value="3" min="1"></div>
-        <div><label>Probabilidad éxito (p)</label><input type="number" id="p_p" value="0.4" min="0.001" max="1" step="0.01"></div>`;
+      html = '<div><label>Éxitos requeridos (r)</label><input type="number" id="p_r" value="3" min="1"></div>' +
+             '<div><label>Probabilidad éxito (p)</label><input type="number" id="p_p" value="0.4" min="0.001" max="1" step="0.01"></div>';
     } else if (dist === "geom") {
-      html = `<div class="full-col"><label>Probabilidad éxito (p)</label><input type="number" id="p_p" value="0.25" min="0.001" max="1" step="0.01"></div>`;
+      html = '<div class="full-col"><label>Probabilidad éxito (p)</label><input type="number" id="p_p" value="0.25" min="0.001" max="1" step="0.01"></div>';
     } else if (dist === "hyper") {
-      html = `
-        <div><label>Población (N)</label><input type="number" id="p_N" value="50" min="1"></div>
-        <div><label>Éxitos Población (K)</label><input type="number" id="p_K" value="15" min="0"></div>
-        <div class="full-col"><label>Tamaño Muestra (n)</label><input type="number" id="p_n" value="10" min="1"></div>`;
+      html = '<div><label>Población (N)</label><input type="number" id="p_N" value="50" min="1"></div>' +
+             '<div><label>Éxitos Población (K)</label><input type="number" id="p_K" value="15" min="0"></div>' +
+             '<div class="full-col"><label>Tamaño Muestra (n)</label><input type="number" id="p_n" value="10" min="1"></div>';
     } else if (dist === "normal") {
-      html = `
-        <div><label>Media (μ)</label><input type="number" id="p_mu" value="0" step="any"></div>
-        <div><label>Desvío estándar (σ)</label><input type="number" id="p_sigma" value="1" min="0.001" step="any"></div>`;
+      html = '<div><label>Media (μ)</label><input type="number" id="p_mu" value="0" step="any"></div>' +
+             '<div><label>Desvío estándar (σ)</label><input type="number" id="p_sigma" value="1" min="0.001" step="any"></div>';
     } else if (dist === "expon") {
-      html = `<div class="full-col"><label>Tasa (λ)</label><input type="number" id="p_lambda" value="1.5" min="0.001" step="any"></div>`;
+      html = '<div class="full-col"><label>Tasa (λ)</label><input type="number" id="p_lambda" value="1.5" min="0.001" step="any"></div>';
     } else if (dist === "uniform") {
-      html = `
-        <div><label>Límite inferior (a)</label><input type="number" id="p_a" value="0" step="any"></div>
-        <div><label>Límite superior (b)</label><input type="number" id="p_b" value="10" step="any"></div>`;
+      html = '<div><label>Límite inferior (a)</label><input type="number" id="p_a" value="0" step="any"></div>' +
+             '<div><label>Límite superior (b)</label><input type="number" id="p_b" value="10" step="any"></div>';
     }
     container.innerHTML = html;
-    container.querySelectorAll('input').forEach(i => i.addEventListener('input', calculate));
+
+    var inputs = container.querySelectorAll('input');
+    for (var i = 0; i < inputs.length; i++) {
+      inputs[i].addEventListener('input', calculate);
+    }
   }
 
-  let currentChartState = null;
+  var currentChartState = null;
 
   function evalCond(val, target, op) {
     if (op === 'eq') return Math.abs(val - target) < 1e-5;
@@ -267,151 +272,151 @@
   }
 
   function calculate() {
-    const dist = document.getElementById('select-dist').value;
-    const op = document.getElementById('select-op').value;
-    const xVal = document.getElementById('input-x').value;
-    const x = parseFloat(xVal !== "" ? xVal : 0);
+    var dist = document.getElementById('select-dist').value;
+    var op = document.getElementById('select-op').value;
+    var x = getVal('input-x', 0);
 
-    let prob = 0, mean = 0, variance = 0;
-    let isDiscrete = !["normal", "expon", "uniform"].includes(dist);
-    let chartData = { type: isDiscrete ? 'discrete' : 'continuous', points: [], minX: 0, maxX: 1 };
-    let extraParams = {};
+    var prob = 0, mean = 0, variance = 0;
+    var isDiscrete = !(dist === "normal" || dist === "expon" || dist === "uniform");
+    var chartData = { type: isDiscrete ? 'discrete' : 'continuous', points: [], minX: 0, maxX: 1 };
+    var extraParams = {};
 
     if (dist === "binom") {
-      const n = parseInt(document.getElementById('p_n')?.value) || 1;
-      const p = parseFloat(document.getElementById('p_p')?.value) || 0;
+      var n = Math.max(1, Math.round(getVal('p_n', 20)));
+      var p = Math.max(0, Math.min(1, getVal('p_p', 0.35)));
       mean = n * p;
       variance = n * p * (1 - p);
       chartData.minX = 0;
       chartData.maxX = n;
 
-      for (let k = 0; k <= n; k++) {
-        const p_k = Math.exp(logComb(n, k) + k * Math.log(p || 1e-10) + (n - k) * Math.log((1 - p) || 1e-10));
+      for (var k = 0; k <= n; k++) {
+        var p_k = Math.exp(logComb(n, k) + k * Math.log(p || 1e-10) + (n - k) * Math.log((1 - p) || 1e-10));
         chartData.points.push({ x: k, y: p_k });
         if (evalCond(k, x, op)) prob += p_k;
       }
     } 
     else if (dist === "poisson") {
-      const l = parseFloat(document.getElementById('p_lambda')?.value) || 1;
+      var l = Math.max(0.001, getVal('p_lambda', 4));
       mean = l;
       variance = l;
-      const maxK = Math.max(Math.ceil(l + 4 * Math.sqrt(l)), Math.ceil(x || 0) + 5, 15);
+      var maxK = Math.max(Math.ceil(l + 4 * Math.sqrt(l)), Math.ceil(x || 0) + 5, 15);
       chartData.minX = 0;
       chartData.maxX = maxK;
 
-      for (let k = 0; k <= maxK; k++) {
-        const p_k = Math.exp(-l + k * Math.log(l) - logFact(k));
-        chartData.points.push({ x: k, y: p_k });
-        if (evalCond(k, x, op)) prob += p_k;
+      for (var k2 = 0; k2 <= maxK; k2++) {
+        var p_k2 = Math.exp(-l + k2 * Math.log(l) - logFact(k2));
+        chartData.points.push({ x: k2, y: p_k2 });
+        if (evalCond(k2, x, op)) prob += p_k2;
       }
     }
     else if (dist === "nbinom") {
-      const r = parseInt(document.getElementById('p_r')?.value) || 1;
-      const p = parseFloat(document.getElementById('p_p')?.value) || 0.5;
-      mean = (r * (1 - p)) / p;
-      variance = (r * (1 - p)) / (p * p);
-      const maxK = Math.max(Math.ceil(mean + 3 * Math.sqrt(variance)), Math.ceil(x || 0) + 5, 20);
+      var r = Math.max(1, Math.round(getVal('p_r', 3)));
+      var pn = Math.max(0.001, Math.min(1, getVal('p_p', 0.4)));
+      mean = (r * (1 - pn)) / pn;
+      variance = (r * (1 - pn)) / (pn * pn);
+      var maxKn = Math.max(Math.ceil(mean + 3 * Math.sqrt(variance)), Math.ceil(x || 0) + 5, 20);
       chartData.minX = 0;
-      chartData.maxX = maxK;
+      chartData.maxX = maxKn;
 
-      for (let k = 0; k <= maxK; k++) {
-        const p_k = Math.exp(logComb(k + r - 1, k) + r * Math.log(p) + k * Math.log(1 - p));
-        chartData.points.push({ x: k, y: p_k });
-        if (evalCond(k, x, op)) prob += p_k;
+      for (var k3 = 0; k3 <= maxKn; k3++) {
+        var p_k3 = Math.exp(logComb(k3 + r - 1, k3) + r * Math.log(pn) + k3 * Math.log(1 - pn));
+        chartData.points.push({ x: k3, y: p_k3 });
+        if (evalCond(k3, x, op)) prob += p_k3;
       }
     }
     else if (dist === "geom") {
-      const p = parseFloat(document.getElementById('p_p')?.value) || 0.5;
-      mean = (1 - p) / p;
-      variance = (1 - p) / (p * p);
-      const maxK = Math.max(Math.ceil(mean + 4 * Math.sqrt(variance)), Math.ceil(x || 0) + 5, 15);
+      var pg = Math.max(0.001, Math.min(1, getVal('p_p', 0.25)));
+      mean = (1 - pg) / pg;
+      variance = (1 - pg) / (pg * pg);
+      var maxKg = Math.max(Math.ceil(mean + 4 * Math.sqrt(variance)), Math.ceil(x || 0) + 5, 15);
       chartData.minX = 0;
-      chartData.maxX = maxK;
+      chartData.maxX = maxKg;
 
-      for (let k = 0; k <= maxK; k++) {
-        const p_k = Math.pow(1 - p, k) * p;
-        chartData.points.push({ x: k, y: p_k });
-        if (evalCond(k, x, op)) prob += p_k;
+      for (var k4 = 0; k4 <= maxKg; k4++) {
+        var p_k4 = Math.pow(1 - pg, k4) * pg;
+        chartData.points.push({ x: k4, y: p_k4 });
+        if (evalCond(k4, x, op)) prob += p_k4;
       }
     }
     else if (dist === "hyper") {
-      const N = parseInt(document.getElementById('p_N')?.value) || 10;
-      const K = parseInt(document.getElementById('p_K')?.value) || 5;
-      const n = parseInt(document.getElementById('p_n')?.value) || 5;
-      mean = (n * K) / N;
-      variance = n * (K / N) * (1 - K / N) * ((N - n) / (N - 1 || 1));
+      var N = Math.max(1, Math.round(getVal('p_N', 50)));
+      var K = Math.max(0, Math.min(N, Math.round(getVal('p_K', 15))));
+      var nh = Math.max(1, Math.min(N, Math.round(getVal('p_n', 10))));
+      mean = (nh * K) / N;
+      variance = nh * (K / N) * (1 - K / N) * ((N - nh) / (N - 1 || 1));
       chartData.minX = 0;
-      chartData.maxX = n;
+      chartData.maxX = nh;
 
-      const minK = Math.max(0, n - (N - K));
-      const maxK = Math.min(n, K);
+      var minKh = Math.max(0, nh - (N - K));
+      var maxKh = Math.min(nh, K);
 
-      for (let k = 0; k <= n; k++) {
-        let p_k = 0;
-        if (k >= minK && k <= maxK) {
-          p_k = Math.exp(logComb(K, k) + logComb(N - K, n - k) - logComb(N, n));
+      for (var k5 = 0; k5 <= nh; k5++) {
+        var p_k5 = 0;
+        if (k5 >= minKh && k5 <= maxKh) {
+          p_k5 = Math.exp(logComb(K, k5) + logComb(N - K, nh - k5) - logComb(N, nh));
         }
-        chartData.points.push({ x: k, y: p_k });
-        if (evalCond(k, x, op)) prob += p_k;
+        chartData.points.push({ x: k5, y: p_k5 });
+        if (evalCond(k5, x, op)) prob += p_k5;
       }
     }
     else if (dist === "normal") {
-      const mu = parseFloat(document.getElementById('p_mu')?.value) || 0;
-      const sigma = parseFloat(document.getElementById('p_sigma')?.value) || 1;
+      var mu = getVal('p_mu', 0);
+      var sigma = Math.max(0.001, getVal('p_sigma', 1));
       mean = mu;
       variance = sigma * sigma;
 
-      const cdf = normalCDF(x, mu, sigma);
+      var cdf = normalCDF(x, mu, sigma);
       if (op === "le" || op === "lt") prob = cdf;
       else if (op === "ge" || op === "gt") prob = 1 - cdf;
       else prob = (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - mu) / sigma, 2));
 
       chartData.minX = mu - 3.8 * sigma;
       chartData.maxX = mu + 3.8 * sigma;
-      const step = (chartData.maxX - chartData.minX) / 120;
-      for (let v = chartData.minX; v <= chartData.maxX; v += step) {
-        const density = (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((v - mu) / sigma, 2));
+      var step = (chartData.maxX - chartData.minX) / 120;
+      for (var v = chartData.minX; v <= chartData.maxX; v += step) {
+        var density = (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((v - mu) / sigma, 2));
         chartData.points.push({ x: v, y: density });
       }
     }
     else if (dist === "expon") {
-      const l = parseFloat(document.getElementById('p_lambda')?.value) || 1;
-      mean = 1 / l;
-      variance = 1 / (l * l);
+      var le = Math.max(0.001, getVal('p_lambda', 1.5));
+      mean = 1 / le;
+      variance = 1 / (le * le);
 
       if (x < 0) prob = (op === "le" || op === "lt") ? 0 : 1;
       else {
-        const cdf = 1 - Math.exp(-l * x);
-        if (op === "le" || op === "lt") prob = cdf;
-        else if (op === "ge" || op === "gt") prob = Math.exp(-l * x);
-        else prob = l * Math.exp(-l * x);
+        var cdfe = 1 - Math.exp(-le * x);
+        if (op === "le" || op === "lt") prob = cdfe;
+        else if (op === "ge" || op === "gt") prob = Math.exp(-le * x);
+        else prob = le * Math.exp(-le * x);
       }
 
       chartData.minX = 0;
-      chartData.maxX = 4.5 / l;
-      const step = chartData.maxX / 120;
-      for (let v = 0; v <= chartData.maxX; v += step) {
-        chartData.points.push({ x: v, y: l * Math.exp(-l * v) });
+      chartData.maxX = 4.5 / le;
+      var stepe = chartData.maxX / 120;
+      for (var ve = 0; ve <= chartData.maxX; ve += stepe) {
+        chartData.points.push({ x: ve, y: le * Math.exp(-le * ve) });
       }
     }
     else if (dist === "uniform") {
-      const a = parseFloat(document.getElementById('p_a')?.value ?? 0);
-      const b = parseFloat(document.getElementById('p_b')?.value ?? 10);
+      var a = getVal('p_a', 0);
+      var b = getVal('p_b', 10);
+      if (b <= a) b = a + 1;
       mean = (a + b) / 2;
       variance = Math.pow(b - a, 2) / 12;
-      extraParams = { a, b };
+      extraParams = { a: a, b: b };
 
       if (x < a) prob = (op === "le" || op === "lt") ? 0 : 1;
       else if (x > b) prob = (op === "le" || op === "lt") ? 1 : 0;
       else {
-        const cdf = (x - a) / (b - a);
-        if (op === "le" || op === "lt") prob = cdf;
-        else if (op === "ge" || op === "gt") prob = 1 - cdf;
+        var cdfu = (x - a) / (b - a);
+        if (op === "le" || op === "lt") prob = cdfu;
+        else if (op === "ge" || op === "gt") prob = 1 - cdfu;
         else prob = 1 / (b - a);
       }
 
-      const h_dens = 1 / (b - a);
-      const span = b - a;
+      var h_dens = 1 / (b - a);
+      var span = b - a;
       chartData.minX = a - span * 0.25;
       chartData.maxX = b + span * 0.25;
 
@@ -425,49 +430,53 @@
       ];
     }
 
-    const opSym = { eq: '=', le: '≤', ge: '≥', lt: '<', gt: '>' }[op];
+    var opSym = { eq: '=', le: '≤', ge: '≥', lt: '<', gt: '>' }[op];
     document.getElementById('prob-output').innerText = (isDiscrete || op !== 'eq') 
-      ? `P(X ${opSym} ${x}) = ${prob.toFixed(5)}` 
-      : `f(${x}) = ${prob.toFixed(5)}`;
-    document.getElementById('mean-output').innerText = `E[X] = ${mean.toFixed(2)}`;
-    document.getElementById('var-output').innerText = `Var(X) = ${variance.toFixed(2)}`;
+      ? "P(X " + opSym + " " + x + ") = " + prob.toFixed(5)
+      : "f(" + x + ") = " + prob.toFixed(5);
+    document.getElementById('mean-output').innerText = "E[X] = " + mean.toFixed(2);
+    document.getElementById('var-output').innerText = "Var(X) = " + variance.toFixed(2);
 
     draw(chartData, x, op, isDiscrete, dist, extraParams);
   }
 
   function draw(data, targetX, op, isDiscrete, distKey, extraParams) {
-    const canvas = document.getElementById('chart');
+    var canvas = document.getElementById('chart');
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
+    var ctx = canvas.getContext('2d');
+    var dpr = window.devicePixelRatio || 1;
     canvas.width = canvas.clientWidth * dpr;
     canvas.height = canvas.clientHeight * dpr;
     ctx.scale(dpr, dpr);
 
-    const w = canvas.clientWidth;
-    const h = canvas.clientHeight;
+    var w = canvas.clientWidth;
+    var h = canvas.clientHeight;
     ctx.clearRect(0, 0, w, h);
 
     if (!data.points || data.points.length === 0) return;
 
-    const padLeft = 46;
-    const padRight = 18;
-    const padTop = 18;
-    const padBottom = 34;
+    var padLeft = 46;
+    var padRight = 18;
+    var padTop = 18;
+    var padBottom = 34;
 
-    const plotW = w - padLeft - padRight;
-    const plotH = h - padTop - padBottom;
+    var plotW = w - padLeft - padRight;
+    var plotH = h - padTop - padBottom;
 
-    const maxY = Math.max(...data.points.map(p => p.y), 0.001) * 1.18;
-    const minX = data.minX;
-    const maxX = data.maxX;
+    var maxY = 0.001;
+    for (var i = 0; i < data.points.length; i++) {
+      if (data.points[i].y > maxY) maxY = data.points[i].y;
+    }
+    maxY *= 1.18;
 
-    const mapX = vx => padLeft + ((vx - minX) / (maxX - minX)) * plotW;
-    const mapY = vy => padTop + plotH - (vy / maxY) * plotH;
+    var minX = data.minX;
+    var maxX = data.maxX;
 
-    currentChartState = { isDiscrete, minX, maxX, padLeft, plotW };
+    var mapX = function(vx) { return padLeft + ((vx - minX) / (maxX - minX)) * plotW; };
+    var mapY = function(vy) { return padTop + plotH - (vy / maxY) * plotH; };
 
-    // Ejes cartesianos
+    currentChartState = { isDiscrete: isDiscrete, minX: minX, maxX: maxX, padLeft: padLeft, plotW: plotW };
+
     ctx.strokeStyle = '#475569';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -476,53 +485,54 @@
     ctx.lineTo(padLeft + plotW, padTop + plotH);
     ctx.stroke();
 
-    // Ticks Eje Y
     ctx.fillStyle = '#94a3b8';
     ctx.font = '10px -apple-system, sans-serif';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
-    [0, maxY / 2, maxY].forEach(val => {
-      const y = mapY(val);
+    var yVals = [0, maxY / 2, maxY];
+    for (var j = 0; j < yVals.length; j++) {
+      var yCoord = mapY(yVals[j]);
       ctx.beginPath();
-      ctx.moveTo(padLeft - 4, y);
-      ctx.lineTo(padLeft, y);
+      ctx.moveTo(padLeft - 4, yCoord);
+      ctx.lineTo(padLeft, yCoord);
       ctx.stroke();
-      ctx.fillText(val.toFixed(2), padLeft - 6, y);
-    });
+      ctx.fillText(yVals[j].toFixed(2), padLeft - 6, yCoord);
+    }
 
-    // Ticks Eje X
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    [minX, (minX + maxX) / 2, maxX].forEach(val => {
-      const x = mapX(val);
+    var xVals = [minX, (minX + maxX) / 2, maxX];
+    for (var k = 0; k < xVals.length; k++) {
+      var xCoord = mapX(xVals[k]);
       ctx.beginPath();
-      ctx.moveTo(x, padTop + plotH);
-      ctx.lineTo(x, padTop + plotH + 4);
+      ctx.moveTo(xCoord, padTop + plotH);
+      ctx.lineTo(xCoord, padTop + plotH + 4);
       ctx.stroke();
-      ctx.fillText(Number(val.toFixed(1)), x, padTop + plotH + 6);
-    });
+      ctx.fillText(Number(xVals[k].toFixed(1)), xCoord, padTop + plotH + 6);
+    }
 
     if (isDiscrete) {
-      const barCount = data.points.length;
-      const barW = plotW / barCount;
+      var barCount = data.points.length;
+      var barW = plotW / barCount;
 
-      data.points.forEach(pt => {
-        const barH = (pt.y / maxY) * plotH;
-        const x = padLeft + (pt.x - minX) * barW;
-        const y = padTop + plotH - barH;
+      for (var idx = 0; idx < data.points.length; idx++) {
+        var pt = data.points[idx];
+        var barH = (pt.y / maxY) * plotH;
+        var bx = padLeft + (pt.x - minX) * barW;
+        var by = padTop + plotH - barH;
 
         ctx.fillStyle = evalCond(pt.x, targetX, op) ? '#38bdf8' : '#334155';
-        ctx.fillRect(x + 1, y, Math.max(barW - 2, 2), barH);
-      });
+        ctx.fillRect(bx + 1, by, Math.max(barW - 2, 2), barH);
+      }
     } else {
       ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
 
       if (distKey === "uniform") {
-        const a = extraParams.a ?? 0;
-        const b = extraParams.b ?? 10;
-        const h_dens = 1 / (b - a);
+        var a = extraParams.a !== undefined ? extraParams.a : 0;
+        var b = extraParams.b !== undefined ? extraParams.b : 10;
+        var h_dens = 1 / (b - a);
 
-        let shadeLeft = a, shadeRight = b;
+        var shadeLeft = a, shadeRight = b;
         if (op === "le" || op === "lt") {
           shadeLeft = a;
           shadeRight = Math.min(Math.max(targetX, a), b);
@@ -532,27 +542,28 @@
         }
 
         if (shadeRight > shadeLeft && op !== "eq") {
-          const sx1 = mapX(shadeLeft);
-          const sx2 = mapX(shadeRight);
-          const syTop = mapY(h_dens);
-          const syBase = mapY(0);
+          var sx1 = mapX(shadeLeft);
+          var sx2 = mapX(shadeRight);
+          var syTop = mapY(h_dens);
+          var syBase = mapY(0);
           ctx.fillRect(sx1, syTop, sx2 - sx1, syBase - syTop);
         }
       } else {
         ctx.beginPath();
-        let started = false;
-        data.points.forEach(pt => {
-          if (evalCond(pt.x, targetX, op)) {
+        var started = false;
+        for (var idx2 = 0; idx2 < data.points.length; idx2++) {
+          var pt2 = data.points[idx2];
+          if (evalCond(pt2.x, targetX, op)) {
             if (!started) {
-              ctx.moveTo(mapX(pt.x), mapY(0));
+              ctx.moveTo(mapX(pt2.x), mapY(0));
               started = true;
             }
-            ctx.lineTo(mapX(pt.x), mapY(pt.y));
+            ctx.lineTo(mapX(pt2.x), mapY(pt2.y));
           } else if (started) {
-            ctx.lineTo(mapX(pt.x), mapY(0));
+            ctx.lineTo(mapX(pt2.x), mapY(0));
             started = false;
           }
-        });
+        }
         if (started) {
           ctx.lineTo(mapX(data.points[data.points.length - 1].x), mapY(0));
         }
@@ -560,19 +571,17 @@
         ctx.fill();
       }
 
-      // Curva principal
       ctx.beginPath();
       ctx.moveTo(mapX(data.points[0].x), mapY(data.points[0].y));
-      for (let i = 1; i < data.points.length; i++) {
-        ctx.lineTo(mapX(data.points[i].x), mapY(data.points[i].y));
+      for (var idx3 = 1; idx3 < data.points.length; idx3++) {
+        ctx.lineTo(mapX(data.points[idx3].x), mapY(data.points[idx3].y));
       }
       ctx.strokeStyle = '#38bdf8';
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Indicador vertical interactivo
       if (targetX >= minX && targetX <= maxX) {
-        const px = mapX(targetX);
+        var px = mapX(targetX);
         ctx.strokeStyle = '#facc15';
         ctx.lineWidth = 1.5;
         ctx.setLineDash([4, 3]);
@@ -587,16 +596,21 @@
 
   function handleCanvasPointer(e) {
     if (!currentChartState) return;
-    const canvas = document.getElementById('chart');
-    const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clickX = clientX - rect.left;
+    var canvas = document.getElementById('chart');
+    var rect = canvas.getBoundingClientRect();
+    var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    var clickX = clientX - rect.left;
 
-    const { isDiscrete, minX, maxX, padLeft, plotW } = currentChartState;
+    var isDiscrete = currentChartState.isDiscrete;
+    var minX = currentChartState.minX;
+    var maxX = currentChartState.maxX;
+    var padLeft = currentChartState.padLeft;
+    var plotW = currentChartState.plotW;
+
     if (clickX < padLeft || clickX > padLeft + plotW) return;
 
-    const ratio = (clickX - padLeft) / plotW;
-    let selectedVal = minX + ratio * (maxX - minX);
+    var ratio = (clickX - padLeft) / plotW;
+    var selectedVal = minX + ratio * (maxX - minX);
 
     if (isDiscrete) {
       selectedVal = Math.round(selectedVal);
@@ -608,26 +622,24 @@
     calculate();
   }
 
-  const canvasEl = document.getElementById('chart');
+  var canvasEl = document.getElementById('chart');
   canvasEl.addEventListener('click', handleCanvasPointer);
-  canvasEl.addEventListener('touchmove', (e) => {
+  canvasEl.addEventListener('touchmove', function(e) {
     handleCanvasPointer(e);
     e.preventDefault();
   }, { passive: false });
 
-  // Modal
-  const modal = document.getElementById('help-modal');
-  document.getElementById('btn-open-help').onclick = () => {
-    const dist = document.getElementById('select-dist').value;
-    const info = INFO_DIST[dist];
+  var modal = document.getElementById('help-modal');
+  document.getElementById('btn-open-help').onclick = function() {
+    var dist = document.getElementById('select-dist').value;
+    var info = INFO_DIST[dist];
     document.getElementById('modal-dist-name').innerText = info.name;
-    document.getElementById('modal-body').innerHTML = `
-      <p><strong>¿Qué calcula?</strong><br>${info.desc}</p>
-      <label>Función de masa / densidad:</label>
-      <div class="formula-container" id="formula-katex"></div>
-      <label>Esperanza y Varianza:</label>
-      <div class="formula-container" id="moments-katex"></div>
-    `;
+    document.getElementById('modal-body').innerHTML = 
+      '<p><strong>¿Qué calcula?</strong><br>' + info.desc + '</p>' +
+      '<label>Función de masa / densidad:</label>' +
+      '<div class="formula-container" id="formula-katex"></div>' +
+      '<label>Esperanza y Varianza:</label>' +
+      '<div class="formula-container" id="moments-katex"></div>';
 
     if (window.katex) {
       katex.render(info.formula, document.getElementById('formula-katex'), { displayMode: true, throwOnError: false });
@@ -636,30 +648,26 @@
     modal.style.display = 'flex';
   };
 
-  document.getElementById('btn-close-help').onclick = () => modal.style.display = 'none';
-  modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+  document.getElementById('btn-close-help').onclick = function() { modal.style.display = 'none'; };
+  modal.onclick = function(e) { if (e.target === modal) modal.style.display = 'none'; };
 
-  // Listeners de cambios
-  document.getElementById('select-dist').addEventListener('change', () => {
+  document.getElementById('select-dist').addEventListener('change', function() {
     renderParamInputs();
     calculate();
   });
   document.getElementById('select-op').addEventListener('change', calculate);
   document.getElementById('input-x').addEventListener('input', calculate);
 
-  // Inicialización directa e inmediata
-  function initApp() {
+  // Inicialización directa
+  try {
     renderParamInputs();
     calculate();
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('sw.js');
-    }
+  } catch (err) {
+    console.error("Error al iniciar:", err);
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initApp);
-  } else {
-    initApp();
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js');
   }
 </script>
 </body>
