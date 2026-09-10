@@ -7,7 +7,7 @@
   <title>Calculadora de Probabilidades</title>
   <link rel="manifest" href="manifest.json">
   
-  <!-- KaTeX CSS y JS para fórmulas matemáticas limpias -->
+  <!-- KaTeX CSS y JS -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
 
@@ -116,7 +116,6 @@
   </div>
 </div>
 
-<!-- Modal descriptivo -->
 <div class="modal-backdrop" id="help-modal">
   <div class="modal-box">
     <div class="modal-title">
@@ -270,15 +269,17 @@
   function calculate() {
     const dist = document.getElementById('select-dist').value;
     const op = document.getElementById('select-op').value;
-    const x = parseFloat(document.getElementById('input-x').value);
+    const xVal = document.getElementById('input-x').value;
+    const x = parseFloat(xVal !== "" ? xVal : 0);
 
     let prob = 0, mean = 0, variance = 0;
     let isDiscrete = !["normal", "expon", "uniform"].includes(dist);
     let chartData = { type: isDiscrete ? 'discrete' : 'continuous', points: [], minX: 0, maxX: 1 };
+    let extraParams = {};
 
     if (dist === "binom") {
-      const n = parseInt(document.getElementById('p_n').value) || 1;
-      const p = parseFloat(document.getElementById('p_p').value) || 0;
+      const n = parseInt(document.getElementById('p_n')?.value) || 1;
+      const p = parseFloat(document.getElementById('p_p')?.value) || 0;
       mean = n * p;
       variance = n * p * (1 - p);
       chartData.minX = 0;
@@ -291,7 +292,7 @@
       }
     } 
     else if (dist === "poisson") {
-      const l = parseFloat(document.getElementById('p_lambda').value) || 1;
+      const l = parseFloat(document.getElementById('p_lambda')?.value) || 1;
       mean = l;
       variance = l;
       const maxK = Math.max(Math.ceil(l + 4 * Math.sqrt(l)), Math.ceil(x || 0) + 5, 15);
@@ -305,8 +306,8 @@
       }
     }
     else if (dist === "nbinom") {
-      const r = parseInt(document.getElementById('p_r').value) || 1;
-      const p = parseFloat(document.getElementById('p_p').value) || 0.5;
+      const r = parseInt(document.getElementById('p_r')?.value) || 1;
+      const p = parseFloat(document.getElementById('p_p')?.value) || 0.5;
       mean = (r * (1 - p)) / p;
       variance = (r * (1 - p)) / (p * p);
       const maxK = Math.max(Math.ceil(mean + 3 * Math.sqrt(variance)), Math.ceil(x || 0) + 5, 20);
@@ -320,7 +321,7 @@
       }
     }
     else if (dist === "geom") {
-      const p = parseFloat(document.getElementById('p_p').value) || 0.5;
+      const p = parseFloat(document.getElementById('p_p')?.value) || 0.5;
       mean = (1 - p) / p;
       variance = (1 - p) / (p * p);
       const maxK = Math.max(Math.ceil(mean + 4 * Math.sqrt(variance)), Math.ceil(x || 0) + 5, 15);
@@ -334,9 +335,9 @@
       }
     }
     else if (dist === "hyper") {
-      const N = parseInt(document.getElementById('p_N').value) || 10;
-      const K = parseInt(document.getElementById('p_K').value) || 5;
-      const n = parseInt(document.getElementById('p_n').value) || 5;
+      const N = parseInt(document.getElementById('p_N')?.value) || 10;
+      const K = parseInt(document.getElementById('p_K')?.value) || 5;
+      const n = parseInt(document.getElementById('p_n')?.value) || 5;
       mean = (n * K) / N;
       variance = n * (K / N) * (1 - K / N) * ((N - n) / (N - 1 || 1));
       chartData.minX = 0;
@@ -355,8 +356,8 @@
       }
     }
     else if (dist === "normal") {
-      const mu = parseFloat(document.getElementById('p_mu').value) || 0;
-      const sigma = parseFloat(document.getElementById('p_sigma').value) || 1;
+      const mu = parseFloat(document.getElementById('p_mu')?.value) || 0;
+      const sigma = parseFloat(document.getElementById('p_sigma')?.value) || 1;
       mean = mu;
       variance = sigma * sigma;
 
@@ -374,7 +375,7 @@
       }
     }
     else if (dist === "expon") {
-      const l = parseFloat(document.getElementById('p_lambda').value) || 1;
+      const l = parseFloat(document.getElementById('p_lambda')?.value) || 1;
       mean = 1 / l;
       variance = 1 / (l * l);
 
@@ -394,10 +395,11 @@
       }
     }
     else if (dist === "uniform") {
-      const a = parseFloat(document.getElementById('p_a').value) || 0;
-      const b = parseFloat(document.getElementById('p_b').value) || 1;
+      const a = parseFloat(document.getElementById('p_a')?.value ?? 0);
+      const b = parseFloat(document.getElementById('p_b')?.value ?? 10);
       mean = (a + b) / 2;
       variance = Math.pow(b - a, 2) / 12;
+      extraParams = { a, b };
 
       if (x < a) prob = (op === "le" || op === "lt") ? 0 : 1;
       else if (x > b) prob = (op === "le" || op === "lt") ? 1 : 0;
@@ -430,11 +432,12 @@
     document.getElementById('mean-output').innerText = `E[X] = ${mean.toFixed(2)}`;
     document.getElementById('var-output').innerText = `Var(X) = ${variance.toFixed(2)}`;
 
-    draw(chartData, x, op, isDiscrete, dist);
+    draw(chartData, x, op, isDiscrete, dist, extraParams);
   }
 
-  function draw(data, targetX, op, isDiscrete, distKey) {
+  function draw(data, targetX, op, isDiscrete, distKey, extraParams) {
     const canvas = document.getElementById('chart');
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
     canvas.width = canvas.clientWidth * dpr;
@@ -469,4 +472,195 @@
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(padLeft, padTop);
- 
+    ctx.lineTo(padLeft, padTop + plotH);
+    ctx.lineTo(padLeft + plotW, padTop + plotH);
+    ctx.stroke();
+
+    // Ticks Eje Y
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '10px -apple-system, sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    [0, maxY / 2, maxY].forEach(val => {
+      const y = mapY(val);
+      ctx.beginPath();
+      ctx.moveTo(padLeft - 4, y);
+      ctx.lineTo(padLeft, y);
+      ctx.stroke();
+      ctx.fillText(val.toFixed(2), padLeft - 6, y);
+    });
+
+    // Ticks Eje X
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    [minX, (minX + maxX) / 2, maxX].forEach(val => {
+      const x = mapX(val);
+      ctx.beginPath();
+      ctx.moveTo(x, padTop + plotH);
+      ctx.lineTo(x, padTop + plotH + 4);
+      ctx.stroke();
+      ctx.fillText(Number(val.toFixed(1)), x, padTop + plotH + 6);
+    });
+
+    if (isDiscrete) {
+      const barCount = data.points.length;
+      const barW = plotW / barCount;
+
+      data.points.forEach(pt => {
+        const barH = (pt.y / maxY) * plotH;
+        const x = padLeft + (pt.x - minX) * barW;
+        const y = padTop + plotH - barH;
+
+        ctx.fillStyle = evalCond(pt.x, targetX, op) ? '#38bdf8' : '#334155';
+        ctx.fillRect(x + 1, y, Math.max(barW - 2, 2), barH);
+      });
+    } else {
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
+
+      if (distKey === "uniform") {
+        const a = extraParams.a ?? 0;
+        const b = extraParams.b ?? 10;
+        const h_dens = 1 / (b - a);
+
+        let shadeLeft = a, shadeRight = b;
+        if (op === "le" || op === "lt") {
+          shadeLeft = a;
+          shadeRight = Math.min(Math.max(targetX, a), b);
+        } else if (op === "ge" || op === "gt") {
+          shadeLeft = Math.min(Math.max(targetX, a), b);
+          shadeRight = b;
+        }
+
+        if (shadeRight > shadeLeft && op !== "eq") {
+          const sx1 = mapX(shadeLeft);
+          const sx2 = mapX(shadeRight);
+          const syTop = mapY(h_dens);
+          const syBase = mapY(0);
+          ctx.fillRect(sx1, syTop, sx2 - sx1, syBase - syTop);
+        }
+      } else {
+        ctx.beginPath();
+        let started = false;
+        data.points.forEach(pt => {
+          if (evalCond(pt.x, targetX, op)) {
+            if (!started) {
+              ctx.moveTo(mapX(pt.x), mapY(0));
+              started = true;
+            }
+            ctx.lineTo(mapX(pt.x), mapY(pt.y));
+          } else if (started) {
+            ctx.lineTo(mapX(pt.x), mapY(0));
+            started = false;
+          }
+        });
+        if (started) {
+          ctx.lineTo(mapX(data.points[data.points.length - 1].x), mapY(0));
+        }
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // Curva principal
+      ctx.beginPath();
+      ctx.moveTo(mapX(data.points[0].x), mapY(data.points[0].y));
+      for (let i = 1; i < data.points.length; i++) {
+        ctx.lineTo(mapX(data.points[i].x), mapY(data.points[i].y));
+      }
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Indicador vertical interactivo
+      if (targetX >= minX && targetX <= maxX) {
+        const px = mapX(targetX);
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.moveTo(px, padTop);
+        ctx.lineTo(px, padTop + plotH);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+  }
+
+  function handleCanvasPointer(e) {
+    if (!currentChartState) return;
+    const canvas = document.getElementById('chart');
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clickX = clientX - rect.left;
+
+    const { isDiscrete, minX, maxX, padLeft, plotW } = currentChartState;
+    if (clickX < padLeft || clickX > padLeft + plotW) return;
+
+    const ratio = (clickX - padLeft) / plotW;
+    let selectedVal = minX + ratio * (maxX - minX);
+
+    if (isDiscrete) {
+      selectedVal = Math.round(selectedVal);
+    } else {
+      selectedVal = parseFloat(selectedVal.toFixed(2));
+    }
+
+    document.getElementById('input-x').value = selectedVal;
+    calculate();
+  }
+
+  const canvasEl = document.getElementById('chart');
+  canvasEl.addEventListener('click', handleCanvasPointer);
+  canvasEl.addEventListener('touchmove', (e) => {
+    handleCanvasPointer(e);
+    e.preventDefault();
+  }, { passive: false });
+
+  // Modal
+  const modal = document.getElementById('help-modal');
+  document.getElementById('btn-open-help').onclick = () => {
+    const dist = document.getElementById('select-dist').value;
+    const info = INFO_DIST[dist];
+    document.getElementById('modal-dist-name').innerText = info.name;
+    document.getElementById('modal-body').innerHTML = `
+      <p><strong>¿Qué calcula?</strong><br>${info.desc}</p>
+      <label>Función de masa / densidad:</label>
+      <div class="formula-container" id="formula-katex"></div>
+      <label>Esperanza y Varianza:</label>
+      <div class="formula-container" id="moments-katex"></div>
+    `;
+
+    if (window.katex) {
+      katex.render(info.formula, document.getElementById('formula-katex'), { displayMode: true, throwOnError: false });
+      katex.render(info.moments, document.getElementById('moments-katex'), { displayMode: true, throwOnError: false });
+    }
+    modal.style.display = 'flex';
+  };
+
+  document.getElementById('btn-close-help').onclick = () => modal.style.display = 'none';
+  modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+
+  // Listeners de cambios
+  document.getElementById('select-dist').addEventListener('change', () => {
+    renderParamInputs();
+    calculate();
+  });
+  document.getElementById('select-op').addEventListener('change', calculate);
+  document.getElementById('input-x').addEventListener('input', calculate);
+
+  // Inicialización directa e inmediata
+  function initApp() {
+    renderParamInputs();
+    calculate();
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initApp);
+  } else {
+    initApp();
+  }
+</script>
+</body>
+</html>
