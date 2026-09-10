@@ -1,4 +1,5 @@
-const CACHE_NAME = 'prob-calc-v4';
+const CACHE_NAME = 'prob-calc-v5';
+
 const ASSETS = [
   './',
   './index.html',
@@ -7,15 +8,19 @@ const ASSETS = [
   'https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js'
 ];
 
-self.addEventListener('install', (e) => {
+// Instalación y almacenamiento en caché de los recursos esenciales
+self.addEventListener('install', (event) => {
   self.skipWaiting();
-  e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      return cache.addAll(ASSETS);
+    })
   );
 });
 
-self.addEventListener('activate', (e) => {
-  e.waitUntil(
+// Activación y limpieza de cachés antiguas (v1, v2, v3, v4, etc.)
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
         keys.map((key) => {
@@ -28,8 +33,20 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-self.addEventListener('fetch', (e) => {
-  e.respondWith(
-    caches.match(e.request).then((res) => res || fetch(e.request))
+// Intercepción de peticiones para funcionamiento 100% offline
+self.addEventListener('fetch', (event) => {
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      return fetch(event.request).catch(() => {
+        // Si no hay red y no está en caché, no arroja error fatal
+        return new Response('Sin conexión', {
+          status: 503,
+          statusText: 'Service Unavailable'
+        });
+      });
+    })
   );
 });
