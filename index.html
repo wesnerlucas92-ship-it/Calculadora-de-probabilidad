@@ -255,12 +255,6 @@
     container.innerHTML = html;
   }
 
-    var inputs = container.querySelectorAll('input');
-    for (var i = 0; i < inputs.length; i++) {
-      inputs[i].addEventListener('input', calculate);
-    }
-  }
-
   var currentChartState = null;
 
   function evalCond(val, target, op) {
@@ -289,14 +283,12 @@
       variance = n * p * (1 - p);
       sd = Math.sqrt(Math.max(variance, 0.001));
 
-      // Ventana dinámica: rango centrado en la masa pero incluyendo x si está cerca
       var winMin = Math.max(0, Math.floor(mean - 4 * sd));
       var winMax = Math.min(n, Math.ceil(mean + 4 * sd));
       if (!isNaN(x)) {
         if (x < winMin) winMin = Math.max(0, Math.floor(x - 2));
         if (x > winMax) winMax = Math.min(n, Math.ceil(x + 2));
       }
-      // Asegurar mínimo de puntos para visualización
       if (winMax - winMin < 10) {
         winMin = Math.max(0, winMin - 5);
         winMax = Math.min(n, winMax + 5);
@@ -305,11 +297,9 @@
       chartData.minX = winMin;
       chartData.maxX = winMax;
 
-      // Cálculo exacto de probabilidad acumulada
       for (var k = 0; k <= n; k++) {
         var p_k = Math.exp(logComb(n, k) + k * Math.log(p || 1e-10) + (n - k) * Math.log((1 - p) || 1e-10));
         if (evalCond(k, x, op)) prob += p_k;
-        // Solo guardamos para dibujar los que caen dentro de la ventana
         if (k >= winMin && k <= winMax) {
           chartData.points.push({ x: k, y: p_k });
         }
@@ -543,7 +533,6 @@
 
     currentChartState = { isDiscrete: isDiscrete, minX: minX, maxX: maxX, padLeft: padLeft, plotW: plotW };
 
-    // Ejes cartesianos
     ctx.strokeStyle = '#475569';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -552,7 +541,6 @@
     ctx.lineTo(padLeft + plotW, padTop + plotH);
     ctx.stroke();
 
-    // Ticks Eje Y
     ctx.fillStyle = '#94a3b8';
     ctx.font = '10px -apple-system, sans-serif';
     ctx.textAlign = 'right';
@@ -567,7 +555,6 @@
       ctx.fillText(yVals[j].toFixed(2), padLeft - 6, yCoord);
     }
 
-    // Ticks Eje X (5 valores de referencia legibles)
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     var xVals = [
@@ -656,7 +643,6 @@
       ctx.stroke();
     }
 
-    // Marcador vertical interactivo
     if (targetX >= minX && targetX <= maxX) {
       var px = mapX(targetX);
       ctx.strokeStyle = '#facc15';
@@ -731,8 +717,18 @@
     renderParamInputs();
     calculate();
   });
-  document.getElementById('select-op').addEventListener('change', calculate);
-  document.getElementById('input-x').addEventListener('input', calculate);
+
+  document.addEventListener('input', function(e) {
+    if (e.target && (e.target.matches('input') || e.target.matches('select'))) {
+      calculate();
+    }
+  });
+
+  document.addEventListener('change', function(e) {
+    if (e.target && (e.target.matches('input') || e.target.matches('select'))) {
+      calculate();
+    }
+  });
 
   try {
     renderParamInputs();
