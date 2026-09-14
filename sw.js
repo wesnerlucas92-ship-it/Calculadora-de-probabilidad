@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prob-calc-v10';
+const CACHE_NAME = 'prob-calc-v11';
 
 const ASSETS = [
   './',
