@@ -18,8 +18,9 @@
     
     .header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
     h1 { font-size: 1.2rem; color: #38bdf8; }
-    .btn-help { background: #334155; color: #38bdf8; border: 1px solid #475569; width: 30px; height: 30px; border-radius: 50%; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
-    .btn-help:active { background: #475569; }
+    .header-actions { display: flex; gap: 8px; }
+    .btn-circle { background: #334155; color: #38bdf8; border: 1px solid #475569; width: 30px; height: 30px; border-radius: 50%; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.95rem; }
+    .btn-circle:active { background: #475569; }
 
     .selector-container { margin-bottom: 12px; }
     label { display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 4px; font-weight: 500; }
@@ -62,7 +63,10 @@
 <div class="app-card">
   <div class="header-row">
     <h1>EyP WL: Probabilidades</h1>
-    <button class="btn-help" id="btn-open-help" title="Ver explicación">?</button>
+    <div class="header-actions">
+      <button class="btn-circle" id="btn-open-about" title="Créditos e información">i</button>
+      <button class="btn-circle" id="btn-open-help" title="Ver fórmulas">?</button>
+    </div>
   </div>
 
   <div class="selector-container">
@@ -71,14 +75,14 @@
       <optgroup label="Discretas">
         <option value="binom" selected>Binomial</option>
         <option value="poisson">Poisson</option>
-        <option value="nbinom">Binomial Negativa</option>
+        <option value="nbinom">Binomial Negativa (Pascal)</option>
         <option value="geom">Geométrica</option>
         <option value="hyper">Hipergeométrica</option>
       </optgroup>
       <optgroup label="Continuas">
         <option value="normal">Normal</option>
-        <option value="expon">Exponencial</option>
         <option value="uniform">Uniforme Continua</option>
+        <option value="expon">Exponencial</option>
       </optgroup>
     </select>
   </div>
@@ -115,6 +119,7 @@
   </div>
 </div>
 
+<!-- Modal explicativo de fórmulas -->
 <div class="modal-backdrop" id="help-modal">
   <div class="modal-box">
     <div class="modal-title">
@@ -125,55 +130,70 @@
   </div>
 </div>
 
+<!-- Modal de créditos y autoría -->
+<div class="modal-backdrop" id="about-modal">
+  <div class="modal-box">
+    <div class="modal-title">
+      <span>Acerca de la app</span>
+      <button class="modal-close" id="btn-close-about">&times;</button>
+    </div>
+    <div class="modal-content">
+      <p style="font-size: 0.95rem; color: #e2e8f0; line-height: 1.5;">
+        App creada por el <strong>Prof. Wesner Lucas</strong> para la cátedra de <strong>Estadística y Probabilidad</strong> del <strong>ISFD Cecilia Braslavsky</strong>.
+      </p>
+    </div>
+  </div>
+</div>
+
 <script>
   var INFO_DIST = {
     binom: {
       name: "Distribución Binomial",
-      desc: "Modela la cantidad de éxitos al repetir n ensayos de Bernoulli independientes con probabilidad constante de éxito p.",
-      formula: "P(X = k) = \\binom{n}{k} p^k (1-p)^{n-k}",
-      moments: "E[X] = np \\quad | \\quad \\text{Var}(X) = np(1-p)"
+      desc: "Número de éxitos en n pruebas de Bernoulli independientes, con probabilidad constante de éxito p y q = 1 - p.",
+      formula: "b(x; n; p) = \\binom{n}{x} p^x q^{n-x} \\quad (x = 0, 1, \\dots, n)",
+      moments: "\\mu = n \\cdot p \\quad | \\quad \\sigma^2 = n \\cdot p \\cdot q"
     },
     poisson: {
       name: "Distribución de Poisson",
-      desc: "Modela la cantidad de eventos que ocurren en un intervalo continuo fijo a una tasa promedio constante λ.",
-      formula: "P(X = k) = \\frac{e^{-\\lambda} \\lambda^k}{k!}",
-      moments: "E[X] = \\lambda \\quad | \\quad \\text{Var}(X) = \\lambda"
+      desc: "Número de resultados que ocurren durante un intervalo de tiempo dado o región específica a tasa promedio constante λ.",
+      formula: "p(x; \\lambda) = \\frac{e^{-\\lambda} \\lambda^x}{x!} \\quad (x = 0, 1, 2, \\dots)",
+      moments: "\\mu = \\lambda \\quad | \\quad \\sigma^2 = \\lambda"
     },
     nbinom: {
-      name: "Binomial Negativa",
-      desc: "Modela la cantidad de fracasos k antes de conseguir exactamente r éxitos en ensayos de Bernoulli independientes.",
-      formula: "P(X = k) = \\binom{k + r - 1}{k} p^r (1-p)^k",
-      moments: "E[X] = \\frac{r(1-p)}{p} \\quad | \\quad \\text{Var}(X) = \\frac{r(1-p)}{p^2}"
+      name: "Distribución Binomial Negativa (Pascal)",
+      desc: "Número de ensayos x necesarios para obtener exactamente k aciertos en procesos de Bernoulli independientes.",
+      formula: "b^*(x; k; p) = \\binom{x - 1}{k - 1} p^k q^{x - k} \\quad (x = k, k+1, \\dots)",
+      moments: "\\mu = \\frac{k}{p} \\quad | \\quad \\sigma^2 = \\frac{k \\cdot q}{p^2}"
     },
     geom: {
       name: "Distribución Geométrica",
-      desc: "Modela el número de fracasos k antes del primer éxito (soporte {0, 1, 2...}).",
-      formula: "P(X = k) = (1 - p)^k p",
-      moments: "E[X] = \\frac{1-p}{p} \\quad | \\quad \\text{Var}(X) = \\frac{1-p}{p^2}"
+      desc: "Número de veces x que se debe realizar el experimento hasta obtener el primer éxito (progresión geométrica de razón q).",
+      formula: "g(x; p) = p \\cdot q^{x - 1} \\quad (x = 1, 2, 3, \\dots)",
+      moments: "\\mu = \\frac{1}{p} \\quad | \\quad \\sigma^2 = \\frac{q}{p^2}"
     },
     hyper: {
       name: "Distribución Hipergeométrica",
-      desc: "Modela extracciones de éxitos k en una muestra n tomada SIN reemplazo de una población N con K elementos favorables.",
-      formula: "P(X = k) = \\frac{\\binom{K}{k} \\binom{N - K}{n - k}}{\\binom{N}{n}}",
-      moments: "E[X] = n\\frac{K}{N} \\quad | \\quad \\text{Var}(X) = n\\frac{K}{N}\\left(1 - \\frac{K}{N}\\right)\\left(\\frac{N - n}{N - 1}\\right)"
+      desc: "Número de éxitos x en una muestra aleatoria n extraída SIN reemplazo de una población N con k éxitos.",
+      formula: "h(x; N; n; k) = \\frac{\\binom{k}{x} \\binom{N - k}{n - x}}{\\binom{N}{n}} \\quad (x = 0, 1, \\dots, n)",
+      moments: "\\mu = \\frac{n \\cdot k}{N} \\quad | \\quad \\sigma^2 = \\frac{N - n}{N - 1} \\cdot n \\cdot \\frac{k}{N} \\left(1 - \\frac{k}{N}\\right)"
     },
     normal: {
       name: "Distribución Normal (Gauss)",
-      desc: "Distribución continua simétrica en forma de campana en torno a su media μ y desvío estándar σ.",
-      formula: "f(x) = \\frac{1}{\\sigma \\sqrt{2\\pi}} \\, e^{-\\frac{1}{2}\\left(\\frac{x - \\mu}{\\sigma}\\right)^2}",
-      moments: "E[X] = \\mu \\quad | \\quad \\text{Var}(X) = \\sigma^2"
+      desc: "Función de densidad continua simétrica respecto a μ con puntos de inflexión en μ ± σ.",
+      formula: "n(x; \\mu; \\sigma) = \\frac{1}{\\sqrt{2\\pi}\\,\\sigma} \\, e^{-\\frac{1}{2}\\left(\\frac{x - \\mu}{\\sigma}\\right)^2} \\quad (x \\in \\mathbb{R})",
+      moments: "\\mu = E[X] \\quad | \\quad \\sigma^2 = \\text{Var}(X)"
+    },
+    uniform: {
+      name: "Distribución Uniforme Continua (Rectangular)",
+      desc: "Densidad constante de base B - A y altura 1 / (B - A) sobre el intervalo [A, B].",
+      formula: "f(x; A; B) = \\frac{1}{B - A} \\quad (A \\le x \\le B)",
+      moments: "\\mu = \\frac{A + B}{2} \\quad | \\quad \\sigma^2 = \\frac{(B - A)^2}{12}"
     },
     expon: {
       name: "Distribución Exponencial",
       desc: "Modela el tiempo continuo transcurrido hasta el próximo evento en un proceso de Poisson con tasa λ > 0.",
       formula: "f(x) = \\lambda e^{-\\lambda x} \\quad (x \\ge 0)",
-      moments: "E[X] = \\frac{1}{\\lambda} \\quad | \\quad \\text{Var}(X) = \\frac{1}{\\lambda^2}"
-    },
-    uniform: {
-      name: "Uniforme Continua",
-      desc: "Distribución continua que asigna probabilidad idéntica a subintervalos de igual longitud contenidos en [a, b].",
-      formula: "f(x) = \\frac{1}{b - a} \\quad (a \\le x \\le b)",
-      moments: "E[X] = \\frac{a + b}{2} \\quad | \\quad \\text{Var}(X) = \\frac{(b - a)^2}{12}"
+      moments: "\\mu = \\frac{1}{\\lambda} \\quad | \\quad \\sigma^2 = \\frac{1}{\\lambda^2}"
     }
   };
 
@@ -231,26 +251,26 @@
     var html = "";
     if (dist === "binom") {
       html = '<div><label>Ensayos (n)</label><input type="number" id="p_n" value="20" min="1"></div>' +
-             '<div><label>Probabilidad (p)</label><input type="number" id="p_p" value="0.35" min="0" max="1" step="0.01"></div>';
+             '<div><label>Probabilidad de éxito (p)</label><input type="number" id="p_p" value="0.35" min="0" max="1" step="0.01"></div>';
     } else if (dist === "poisson") {
-      html = '<div class="full-col"><label>Tasa media (λ)</label><input type="number" id="p_lambda" value="4" min="0.001" step="0.1"></div>';
+      html = '<div class="full-col"><label>Tasa promedio (λ)</label><input type="number" id="p_lambda" value="4" min="0.001" step="0.1"></div>';
     } else if (dist === "nbinom") {
-      html = '<div><label>Éxitos requeridos (r)</label><input type="number" id="p_r" value="3" min="1"></div>' +
-             '<div><label>Probabilidad éxito (p)</label><input type="number" id="p_p" value="0.4" min="0.001" max="1" step="0.01"></div>';
+      html = '<div><label>Aciertos requeridos (k)</label><input type="number" id="p_k" value="3" min="1"></div>' +
+             '<div><label>Probabilidad de éxito (p)</label><input type="number" id="p_p" value="0.4" min="0.001" max="1" step="0.01"></div>';
     } else if (dist === "geom") {
-      html = '<div class="full-col"><label>Probabilidad éxito (p)</label><input type="number" id="p_p" value="0.25" min="0.001" max="1" step="0.01"></div>';
+      html = '<div class="full-col"><label>Probabilidad de éxito (p)</label><input type="number" id="p_p" value="0.25" min="0.001" max="1" step="0.01"></div>';
     } else if (dist === "hyper") {
-      html = '<div><label>Población (N)</label><input type="number" id="p_N" value="50" min="1"></div>' +
-             '<div><label>Éxitos Población (K)</label><input type="number" id="p_K" value="15" min="0"></div>' +
-             '<div class="full-col"><label>Tamaño Muestra (n)</label><input type="number" id="p_n" value="10" min="1"></div>';
+      html = '<div><label>Población total (N)</label><input type="number" id="p_N" value="50" min="1"></div>' +
+             '<div><label>Éxitos en población (k)</label><input type="number" id="p_k" value="15" min="0"></div>' +
+             '<div class="full-col"><label>Tamaño de muestra (n)</label><input type="number" id="p_n" value="10" min="1"></div>';
     } else if (dist === "normal") {
       html = '<div><label>Media (μ)</label><input type="number" id="p_mu" value="0" step="any"></div>' +
              '<div><label>Desvío estándar (σ)</label><input type="number" id="p_sigma" value="1" min="0.001" step="any"></div>';
+    } else if (dist === "uniform") {
+      html = '<div><label>Límite inferior (A)</label><input type="number" id="p_A" value="0" step="any"></div>' +
+             '<div><label>Límite superior (B)</label><input type="number" id="p_B" value="10" step="any"></div>';
     } else if (dist === "expon") {
       html = '<div class="full-col"><label>Tasa (λ)</label><input type="number" id="p_lambda" value="1.5" min="0.001" step="any"></div>';
-    } else if (dist === "uniform") {
-      html = '<div><label>Límite inferior (a)</label><input type="number" id="p_a" value="0" step="any"></div>' +
-             '<div><label>Límite superior (b)</label><input type="number" id="p_b" value="10" step="any"></div>';
     }
     container.innerHTML = html;
   }
@@ -266,7 +286,6 @@
     return false;
   }
 
-  // Permite saber si el usuario acaba de alterar el parámetro n, p, etc., para recentrar x
   function calculate(isParamChange) {
     var dist = document.getElementById('select-dist').value;
     var op = document.getElementById('select-op').value;
@@ -280,11 +299,11 @@
     if (dist === "binom") {
       var n = Math.max(1, Math.round(getVal('p_n', 20)));
       var p = Math.max(0, Math.min(1, getVal('p_p', 0.35)));
+      var q = 1 - p;
       mean = n * p;
-      variance = n * p * (1 - p);
+      variance = n * p * q;
       sd = Math.sqrt(Math.max(variance, 0.001));
 
-      // Ventana de enfoque: centrada exactamente en la masa +/- 3.5 desvíos
       var winMin = Math.max(0, Math.floor(mean - 3.5 * sd));
       var winMax = Math.min(n, Math.ceil(mean + 3.5 * sd));
       if (winMax - winMin < 8) {
@@ -292,7 +311,6 @@
         winMax = Math.min(n, Math.ceil(mean + 4));
       }
 
-      // Si se cambiaron los parámetros y x quedó totalmente descolocado, recentrar x a la media
       if (isParamChange && (x < winMin || x > winMax)) {
         x = Math.round(mean);
         document.getElementById('input-x').value = x;
@@ -302,7 +320,7 @@
       chartData.maxX = winMax;
 
       for (var k = 0; k <= n; k++) {
-        var p_k = Math.exp(logComb(n, k) + k * Math.log(p || 1e-10) + (n - k) * Math.log((1 - p) || 1e-10));
+        var p_k = Math.exp(logComb(n, k) + k * Math.log(p || 1e-10) + (n - k) * Math.log(q || 1e-10));
         if (evalCond(k, x, op)) prob += p_k;
         if (k >= winMin && k <= winMax) {
           chartData.points.push({ x: k, y: p_k });
@@ -337,13 +355,14 @@
       }
     }
     else if (dist === "nbinom") {
-      var r = Math.max(1, Math.round(getVal('p_r', 3)));
+      var kTarget = Math.max(1, Math.round(getVal('p_k', 3)));
       var pn = Math.max(0.001, Math.min(1, getVal('p_p', 0.4)));
-      mean = (r * (1 - pn)) / pn;
-      variance = (r * (1 - pn)) / (pn * pn);
+      var qn = 1 - pn;
+      mean = kTarget / pn;
+      variance = (kTarget * qn) / (pn * pn);
       sd = Math.sqrt(variance);
 
-      var winMinNb = Math.max(0, Math.floor(mean - 3.5 * sd));
+      var winMinNb = Math.max(kTarget, Math.floor(mean - 3.5 * sd));
       var winMaxNb = Math.ceil(mean + 3.5 * sd);
       if (winMaxNb - winMinNb < 8) winMaxNb = winMinNb + 8;
 
@@ -352,25 +371,26 @@
         document.getElementById('input-x').value = x;
       }
 
-      var evalMaxNb = Math.max(winMaxNb + 20, Math.ceil(mean + 6 * sd));
+      var evalMaxNb = Math.max(winMaxNb + 25, Math.ceil(mean + 6 * sd));
       chartData.minX = winMinNb;
       chartData.maxX = winMaxNb;
 
-      for (var k3 = 0; k3 <= evalMaxNb; k3++) {
-        var p_k3 = Math.exp(logComb(k3 + r - 1, k3) + r * Math.log(pn) + k3 * Math.log(1 - pn));
-        if (evalCond(k3, x, op)) prob += p_k3;
-        if (k3 >= winMinNb && k3 <= winMaxNb) {
-          chartData.points.push({ x: k3, y: p_k3 });
+      for (var t = kTarget; t <= evalMaxNb; t++) {
+        var p_t = Math.exp(logComb(t - 1, kTarget - 1) + kTarget * Math.log(pn) + (t - kTarget) * Math.log(qn));
+        if (evalCond(t, x, op)) prob += p_t;
+        if (t >= winMinNb && t <= winMaxNb) {
+          chartData.points.push({ x: t, y: p_t });
         }
       }
     }
     else if (dist === "geom") {
       var pg = Math.max(0.001, Math.min(1, getVal('p_p', 0.25)));
-      mean = (1 - pg) / pg;
-      variance = (1 - pg) / (pg * pg);
+      var qg = 1 - pg;
+      mean = 1 / pg;
+      variance = qg / (pg * pg);
       sd = Math.sqrt(variance);
 
-      var winMinG = 0;
+      var winMinG = 1;
       var winMaxG = Math.ceil(mean + 3.5 * sd);
       if (winMaxG < 8) winMaxG = 8;
 
@@ -383,24 +403,24 @@
       chartData.minX = winMinG;
       chartData.maxX = winMaxG;
 
-      for (var k4 = 0; k4 <= evalMaxG; k4++) {
-        var p_k4 = Math.pow(1 - pg, k4) * pg;
-        if (evalCond(k4, x, op)) prob += p_k4;
-        if (k4 >= winMinG && k4 <= winMaxG) {
-          chartData.points.push({ x: k4, y: p_k4 });
+      for (var t2 = 1; t2 <= evalMaxG; t2++) {
+        var p_t2 = pg * Math.pow(qg, t2 - 1);
+        if (evalCond(t2, x, op)) prob += p_t2;
+        if (t2 >= winMinG && t2 <= winMaxG) {
+          chartData.points.push({ x: t2, y: p_t2 });
         }
       }
     }
     else if (dist === "hyper") {
       var N = Math.max(1, Math.round(getVal('p_N', 50)));
-      var K = Math.max(0, Math.min(N, Math.round(getVal('p_K', 15))));
+      var kSucc = Math.max(0, Math.min(N, Math.round(getVal('p_k', 15))));
       var nh = Math.max(1, Math.min(N, Math.round(getVal('p_n', 10))));
-      mean = (nh * K) / N;
-      variance = nh * (K / N) * (1 - K / N) * ((N - nh) / (N - 1 || 1));
+      mean = (nh * kSucc) / N;
+      variance = ((N - nh) / (N - 1 || 1)) * nh * (kSucc / N) * (1 - kSucc / N);
       sd = Math.sqrt(Math.max(variance, 0.001));
 
-      var minKh = Math.max(0, nh - (N - K));
-      var maxKh = Math.min(nh, K);
+      var minKh = Math.max(0, nh - (N - kSucc));
+      var maxKh = Math.min(nh, kSucc);
 
       var winMinH = Math.max(minKh, Math.floor(mean - 3.5 * sd));
       var winMaxH = Math.min(maxKh, Math.ceil(mean + 3.5 * sd));
@@ -417,11 +437,11 @@
       chartData.minX = winMinH;
       chartData.maxX = winMaxH;
 
-      for (var k5 = minKh; k5 <= maxKh; k5++) {
-        var p_k5 = Math.exp(logComb(K, k5) + logComb(N - K, nh - k5) - logComb(N, nh));
-        if (evalCond(k5, x, op)) prob += p_k5;
-        if (k5 >= winMinH && k5 <= winMaxH) {
-          chartData.points.push({ x: k5, y: p_k5 });
+      for (var s = minKh; s <= maxKh; s++) {
+        var p_s = Math.exp(logComb(kSucc, s) + logComb(N - kSucc, nh - s) - logComb(N, nh));
+        if (evalCond(s, x, op)) prob += p_s;
+        if (s >= winMinH && s <= winMaxH) {
+          chartData.points.push({ x: s, y: p_s });
         }
       }
     }
@@ -452,6 +472,42 @@
         chartData.points.push({ x: v, y: density });
       }
     }
+    else if (dist === "uniform") {
+      var A = getVal('p_A', 0);
+      var B = getVal('p_B', 10);
+      if (B <= A) B = A + 1;
+      mean = (A + B) / 2;
+      variance = Math.pow(B - A, 2) / 12;
+      extraParams = { A: A, B: B };
+
+      if (x < A) prob = (op === "le" || op === "lt") ? 0 : 1;
+      else if (x > B) prob = (op === "le" || op === "lt") ? 1 : 0;
+      else {
+        var cdfu = (x - A) / (B - A);
+        if (op === "le" || op === "lt") prob = cdfu;
+        else if (op === "ge" || op === "gt") prob = 1 - cdfu;
+        else prob = 1 / (B - A);
+      }
+
+      if (isParamChange && (x < A || x > B)) {
+        x = parseFloat(((A + B) / 2).toFixed(2));
+        document.getElementById('input-x').value = x;
+      }
+
+      var h_dens = 1 / (B - A);
+      var span = B - A;
+      chartData.minX = A - span * 0.15;
+      chartData.maxX = B + span * 0.15;
+
+      chartData.points = [
+        { x: chartData.minX, y: 0 },
+        { x: A, y: 0 },
+        { x: A, y: h_dens },
+        { x: B, y: h_dens },
+        { x: B, y: 0 },
+        { x: chartData.maxX, y: 0 }
+      ];
+    }
     else if (dist === "expon") {
       var le = Math.max(0.001, getVal('p_lambda', 1.5));
       mean = 1 / le;
@@ -477,42 +533,6 @@
       for (var ve = 0; ve <= chartData.maxX; ve += stepe) {
         chartData.points.push({ x: ve, y: le * Math.exp(-le * ve) });
       }
-    }
-    else if (dist === "uniform") {
-      var a = getVal('p_a', 0);
-      var b = getVal('p_b', 10);
-      if (b <= a) b = a + 1;
-      mean = (a + b) / 2;
-      variance = Math.pow(b - a, 2) / 12;
-      extraParams = { a: a, b: b };
-
-      if (x < a) prob = (op === "le" || op === "lt") ? 0 : 1;
-      else if (x > b) prob = (op === "le" || op === "lt") ? 1 : 0;
-      else {
-        var cdfu = (x - a) / (b - a);
-        if (op === "le" || op === "lt") prob = cdfu;
-        else if (op === "ge" || op === "gt") prob = 1 - cdfu;
-        else prob = 1 / (b - a);
-      }
-
-      if (isParamChange && (x < a || x > b)) {
-        x = parseFloat(((a + b) / 2).toFixed(2));
-        document.getElementById('input-x').value = x;
-      }
-
-      var h_dens = 1 / (b - a);
-      var span = b - a;
-      chartData.minX = a - span * 0.15;
-      chartData.maxX = b + span * 0.15;
-
-      chartData.points = [
-        { x: chartData.minX, y: 0 },
-        { x: a, y: 0 },
-        { x: a, y: h_dens },
-        { x: b, y: h_dens },
-        { x: b, y: 0 },
-        { x: chartData.maxX, y: 0 }
-      ];
     }
 
     var opSym = { eq: '=', le: '≤', ge: '≥', lt: '<', gt: '>' }[op];
@@ -563,7 +583,6 @@
 
     currentChartState = { isDiscrete: isDiscrete, minX: minX, maxX: maxX, padLeft: padLeft, plotW: plotW };
 
-    // Ejes
     ctx.strokeStyle = '#475569';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -572,7 +591,6 @@
     ctx.lineTo(padLeft + plotW, padTop + plotH);
     ctx.stroke();
 
-    // Graduaciones Y
     ctx.fillStyle = '#94a3b8';
     ctx.font = '10px -apple-system, sans-serif';
     ctx.textAlign = 'right';
@@ -587,7 +605,6 @@
       ctx.fillText(yVals[j].toFixed(2), padLeft - 6, yCoord);
     }
 
-    // Graduaciones X
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     var xVals = [
@@ -623,17 +640,17 @@
       ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
 
       if (distKey === "uniform") {
-        var a = extraParams.a !== undefined ? extraParams.a : 0;
-        var b = extraParams.b !== undefined ? extraParams.b : 10;
-        var h_dens = 1 / (b - a);
+        var A = extraParams.A !== undefined ? extraParams.A : 0;
+        var B = extraParams.B !== undefined ? extraParams.B : 10;
+        var h_dens = 1 / (B - A);
 
-        var shadeLeft = a, shadeRight = b;
+        var shadeLeft = A, shadeRight = B;
         if (op === "le" || op === "lt") {
-          shadeLeft = a;
-          shadeRight = Math.min(Math.max(targetX, a), b);
+          shadeLeft = A;
+          shadeRight = Math.min(Math.max(targetX, A), B);
         } else if (op === "ge" || op === "gt") {
-          shadeLeft = Math.min(Math.max(targetX, a), b);
-          shadeRight = b;
+          shadeLeft = Math.min(Math.max(targetX, A), B);
+          shadeRight = B;
         }
 
         if (shadeRight > shadeLeft && op !== "eq") {
@@ -676,7 +693,6 @@
       ctx.stroke();
     }
 
-    // Línea de referencia sólo si está dentro de la ventana de dibujo
     if (targetX >= minX && targetX <= maxX) {
       var px = mapX(targetX);
       ctx.strokeStyle = '#facc15';
@@ -715,7 +731,7 @@
     }
 
     document.getElementById('input-x').value = selectedVal;
-    calculate(false); // No es cambio de parámetro, fue clic en el gráfico
+    calculate(false);
   }
 
   var canvasEl = document.getElementById('chart');
@@ -725,8 +741,10 @@
     e.preventDefault();
   }, { passive: false });
 
-  // Modal
-  var modal = document.getElementById('help-modal');
+  // Modales
+  var helpModal = document.getElementById('help-modal');
+  var aboutModal = document.getElementById('about-modal');
+
   document.getElementById('btn-open-help').onclick = function() {
     var dist = document.getElementById('select-dist').value;
     var info = INFO_DIST[dist];
@@ -742,18 +760,26 @@
       katex.render(info.formula, document.getElementById('formula-katex'), { displayMode: true, throwOnError: false });
       katex.render(info.moments, document.getElementById('moments-katex'), { displayMode: true, throwOnError: false });
     }
-    modal.style.display = 'flex';
+    helpModal.style.display = 'flex';
   };
 
-  document.getElementById('btn-close-help').onclick = function() { modal.style.display = 'none'; };
-  modal.onclick = function(e) { if (e.target === modal) modal.style.display = 'none'; };
+  document.getElementById('btn-close-help').onclick = function() { helpModal.style.display = 'none'; };
+
+  document.getElementById('btn-open-about').onclick = function() {
+    aboutModal.style.display = 'flex';
+  };
+  document.getElementById('btn-close-about').onclick = function() { aboutModal.style.display = 'none'; };
+
+  window.onclick = function(e) {
+    if (e.target === helpModal) helpModal.style.display = 'none';
+    if (e.target === aboutModal) aboutModal.style.display = 'none';
+  };
 
   document.getElementById('select-dist').addEventListener('change', function() {
     renderParamInputs();
     calculate(true);
   });
 
-  // Delegación universal distinguiendo si se toca el valor x o un parámetro estructural
   document.addEventListener('input', function(e) {
     if (e.target && (e.target.matches('input') || e.target.matches('select'))) {
       var isParam = (e.target.id !== 'input-x' && e.target.id !== 'select-op');
