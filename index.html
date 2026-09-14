@@ -266,7 +266,8 @@
     return false;
   }
 
-  function calculate() {
+  // Permite saber si el usuario acaba de alterar el parámetro n, p, etc., para recentrar x
+  function calculate(isParamChange) {
     var dist = document.getElementById('select-dist').value;
     var op = document.getElementById('select-op').value;
     var x = getVal('input-x', 0);
@@ -283,15 +284,18 @@
       variance = n * p * (1 - p);
       sd = Math.sqrt(Math.max(variance, 0.001));
 
-      var winMin = Math.max(0, Math.floor(mean - 4 * sd));
-      var winMax = Math.min(n, Math.ceil(mean + 4 * sd));
-      if (!isNaN(x)) {
-        if (x < winMin) winMin = Math.max(0, Math.floor(x - 2));
-        if (x > winMax) winMax = Math.min(n, Math.ceil(x + 2));
+      // Ventana de enfoque: centrada exactamente en la masa +/- 3.5 desvíos
+      var winMin = Math.max(0, Math.floor(mean - 3.5 * sd));
+      var winMax = Math.min(n, Math.ceil(mean + 3.5 * sd));
+      if (winMax - winMin < 8) {
+        winMin = Math.max(0, Math.floor(mean - 4));
+        winMax = Math.min(n, Math.ceil(mean + 4));
       }
-      if (winMax - winMin < 10) {
-        winMin = Math.max(0, winMin - 5);
-        winMax = Math.min(n, winMax + 5);
+
+      // Si se cambiaron los parámetros y x quedó totalmente descolocado, recentrar x a la media
+      if (isParamChange && (x < winMin || x > winMax)) {
+        x = Math.round(mean);
+        document.getElementById('input-x').value = x;
       }
 
       chartData.minX = winMin;
@@ -311,14 +315,16 @@
       variance = l;
       sd = Math.sqrt(l);
 
-      var winMinP = Math.max(0, Math.floor(mean - 4 * sd));
-      var winMaxP = Math.ceil(mean + 4 * sd);
-      if (!isNaN(x)) {
-        if (x < winMinP) winMinP = Math.max(0, Math.floor(x - 2));
-        if (x > winMaxP) winMaxP = Math.ceil(x + 2);
-      }
-      var evalMax = Math.max(winMaxP + 10, Math.ceil(l + 6 * sd));
+      var winMinP = Math.max(0, Math.floor(mean - 3.5 * sd));
+      var winMaxP = Math.ceil(mean + 3.5 * sd);
+      if (winMaxP - winMinP < 8) winMaxP = winMinP + 8;
 
+      if (isParamChange && (x < winMinP || x > winMaxP)) {
+        x = Math.round(mean);
+        document.getElementById('input-x').value = x;
+      }
+
+      var evalMax = Math.max(winMaxP + 20, Math.ceil(l + 6 * sd));
       chartData.minX = winMinP;
       chartData.maxX = winMaxP;
 
@@ -338,13 +344,15 @@
       sd = Math.sqrt(variance);
 
       var winMinNb = Math.max(0, Math.floor(mean - 3.5 * sd));
-      var winMaxNb = Math.ceil(mean + 4 * sd);
-      if (!isNaN(x)) {
-        if (x < winMinNb) winMinNb = Math.max(0, Math.floor(x - 2));
-        if (x > winMaxNb) winMaxNb = Math.ceil(x + 2);
-      }
-      var evalMaxNb = Math.max(winMaxNb + 15, Math.ceil(mean + 6 * sd));
+      var winMaxNb = Math.ceil(mean + 3.5 * sd);
+      if (winMaxNb - winMinNb < 8) winMaxNb = winMinNb + 8;
 
+      if (isParamChange && (x < winMinNb || x > winMaxNb)) {
+        x = Math.round(mean);
+        document.getElementById('input-x').value = x;
+      }
+
+      var evalMaxNb = Math.max(winMaxNb + 20, Math.ceil(mean + 6 * sd));
       chartData.minX = winMinNb;
       chartData.maxX = winMaxNb;
 
@@ -363,10 +371,15 @@
       sd = Math.sqrt(variance);
 
       var winMinG = 0;
-      var winMaxG = Math.ceil(mean + 4 * sd);
-      if (!isNaN(x) && x > winMaxG) winMaxG = Math.ceil(x + 2);
-      var evalMaxG = Math.max(winMaxG + 15, Math.ceil(mean + 6 * sd));
+      var winMaxG = Math.ceil(mean + 3.5 * sd);
+      if (winMaxG < 8) winMaxG = 8;
 
+      if (isParamChange && (x < winMinG || x > winMaxG)) {
+        x = Math.round(mean);
+        document.getElementById('input-x').value = x;
+      }
+
+      var evalMaxG = Math.max(winMaxG + 20, Math.ceil(mean + 6 * sd));
       chartData.minX = winMinG;
       chartData.maxX = winMaxG;
 
@@ -389,11 +402,16 @@
       var minKh = Math.max(0, nh - (N - K));
       var maxKh = Math.min(nh, K);
 
-      var winMinH = Math.max(minKh, Math.floor(mean - 4 * sd));
-      var winMaxH = Math.min(maxKh, Math.ceil(mean + 4 * sd));
-      if (!isNaN(x)) {
-        if (x < winMinH && x >= minKh) winMinH = Math.floor(x);
-        if (x > winMaxH && x <= maxKh) winMaxH = Math.ceil(x);
+      var winMinH = Math.max(minKh, Math.floor(mean - 3.5 * sd));
+      var winMaxH = Math.min(maxKh, Math.ceil(mean + 3.5 * sd));
+      if (winMaxH - winMinH < 6) {
+        winMinH = minKh;
+        winMaxH = maxKh;
+      }
+
+      if (isParamChange && (x < winMinH || x > winMaxH)) {
+        x = Math.round(mean);
+        document.getElementById('input-x').value = x;
       }
 
       chartData.minX = winMinH;
@@ -418,11 +436,12 @@
       else if (op === "ge" || op === "gt") prob = 1 - cdf;
       else prob = (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - mu) / sigma, 2));
 
-      var winMinNorm = mu - 3.8 * sigma;
-      var winMaxNorm = mu + 3.8 * sigma;
-      if (!isNaN(x)) {
-        if (x < winMinNorm) winMinNorm = x - 0.5 * sigma;
-        if (x > winMaxNorm) winMaxNorm = x + 0.5 * sigma;
+      var winMinNorm = mu - 3.5 * sigma;
+      var winMaxNorm = mu + 3.5 * sigma;
+
+      if (isParamChange && (x < winMinNorm || x > winMaxNorm)) {
+        x = parseFloat(mu.toFixed(2));
+        document.getElementById('input-x').value = x;
       }
 
       chartData.minX = winMinNorm;
@@ -446,8 +465,14 @@
         else prob = le * Math.exp(-le * x);
       }
 
+      var winMaxExpon = 4.0 / le;
+      if (isParamChange && (x < 0 || x > winMaxExpon)) {
+        x = parseFloat((1 / le).toFixed(2));
+        document.getElementById('input-x').value = x;
+      }
+
       chartData.minX = 0;
-      chartData.maxX = Math.max(4.5 / le, isNaN(x) ? 0 : x + 1 / le);
+      chartData.maxX = winMaxExpon;
       var stepe = chartData.maxX / 140;
       for (var ve = 0; ve <= chartData.maxX; ve += stepe) {
         chartData.points.push({ x: ve, y: le * Math.exp(-le * ve) });
@@ -470,10 +495,15 @@
         else prob = 1 / (b - a);
       }
 
+      if (isParamChange && (x < a || x > b)) {
+        x = parseFloat(((a + b) / 2).toFixed(2));
+        document.getElementById('input-x').value = x;
+      }
+
       var h_dens = 1 / (b - a);
       var span = b - a;
-      chartData.minX = Math.min(a - span * 0.2, isNaN(x) ? a : Math.min(a, x - span * 0.1));
-      chartData.maxX = Math.max(b + span * 0.2, isNaN(x) ? b : Math.max(b, x + span * 0.1));
+      chartData.minX = a - span * 0.15;
+      chartData.maxX = b + span * 0.15;
 
       chartData.points = [
         { x: chartData.minX, y: 0 },
@@ -533,6 +563,7 @@
 
     currentChartState = { isDiscrete: isDiscrete, minX: minX, maxX: maxX, padLeft: padLeft, plotW: plotW };
 
+    // Ejes
     ctx.strokeStyle = '#475569';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -541,6 +572,7 @@
     ctx.lineTo(padLeft + plotW, padTop + plotH);
     ctx.stroke();
 
+    // Graduaciones Y
     ctx.fillStyle = '#94a3b8';
     ctx.font = '10px -apple-system, sans-serif';
     ctx.textAlign = 'right';
@@ -555,6 +587,7 @@
       ctx.fillText(yVals[j].toFixed(2), padLeft - 6, yCoord);
     }
 
+    // Graduaciones X
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     var xVals = [
@@ -643,6 +676,7 @@
       ctx.stroke();
     }
 
+    // Línea de referencia sólo si está dentro de la ventana de dibujo
     if (targetX >= minX && targetX <= maxX) {
       var px = mapX(targetX);
       ctx.strokeStyle = '#facc15';
@@ -681,7 +715,7 @@
     }
 
     document.getElementById('input-x').value = selectedVal;
-    calculate();
+    calculate(false); // No es cambio de parámetro, fue clic en el gráfico
   }
 
   var canvasEl = document.getElementById('chart');
@@ -691,6 +725,7 @@
     e.preventDefault();
   }, { passive: false });
 
+  // Modal
   var modal = document.getElementById('help-modal');
   document.getElementById('btn-open-help').onclick = function() {
     var dist = document.getElementById('select-dist').value;
@@ -715,24 +750,27 @@
 
   document.getElementById('select-dist').addEventListener('change', function() {
     renderParamInputs();
-    calculate();
+    calculate(true);
   });
 
+  // Delegación universal distinguiendo si se toca el valor x o un parámetro estructural
   document.addEventListener('input', function(e) {
     if (e.target && (e.target.matches('input') || e.target.matches('select'))) {
-      calculate();
+      var isParam = (e.target.id !== 'input-x' && e.target.id !== 'select-op');
+      calculate(isParam);
     }
   });
 
   document.addEventListener('change', function(e) {
     if (e.target && (e.target.matches('input') || e.target.matches('select'))) {
-      calculate();
+      var isParam = (e.target.id !== 'input-x' && e.target.id !== 'select-op');
+      calculate(isParam);
     }
   });
 
   try {
     renderParamInputs();
-    calculate();
+    calculate(true);
   } catch (err) {
     console.error("Error al iniciar:", err);
   }
