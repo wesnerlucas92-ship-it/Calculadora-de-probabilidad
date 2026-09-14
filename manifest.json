@@ -1,16 +1,16 @@
 {
-  "name": "Calculadora de Probabilidades",
-  "short_name": "ProbCalc",
+  "name": "EyP WL",
+  "short_name": "EyP",
   "start_url": "index.html",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#1e293b",
+  "background_color": "#0b1120",
+  "theme_color": "#0f172a",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3595/3595455.png",
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='115' fill='%230f172a'/%3E%3Crect x='106' y='290' width='50' height='120' rx='8' fill='%23334155'/%3E%3Crect x='176' y='210' width='50' height='200' rx='8' fill='%231e3a8a'/%3E%3Crect x='246' y='140' width='50' height='270' rx='8' fill='%230284c7'/%3E%3Crect x='316' y='230' width='50' height='180' rx='8' fill='%231e3a8a'/%3E%3Crect x='386' y='320' width='50' height='90' rx='8' fill='%23334155'/%3E%3Cpath d='M60 410 C 170 410, 200 130, 256 130 C 312 130, 342 410, 452 410' fill='none' stroke='%2338bdf8' stroke-width='22' stroke-linecap='round'/%3E%3Ctext x='256' y='475' font-family='sans-serif' font-size='56' font-weight='bold' fill='%2338bdf8' text-anchor='middle'%3EEyP%3C/text%3E%3C/svg%3E",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ]
