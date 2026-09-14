@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#0f172a">
- <title>EyP WL - Calculadora de Probabilidades</title>
+  <title>EyP WL - Calculadora de Probabilidades</title>
   <link rel="manifest" href="manifest.json">
   
   <!-- KaTeX -->
@@ -276,7 +276,7 @@
     var op = document.getElementById('select-op').value;
     var x = getVal('input-x', 0);
 
-    var prob = 0, mean = 0, variance = 0;
+    var prob = 0, mean = 0, variance = 0, sd = 1;
     var isDiscrete = !(dist === "normal" || dist === "expon" || dist === "uniform");
     var chartData = { type: isDiscrete ? 'discrete' : 'continuous', points: [], minX: 0, maxX: 1 };
     var extraParams = {};
@@ -286,27 +286,57 @@
       var p = Math.max(0, Math.min(1, getVal('p_p', 0.35)));
       mean = n * p;
       variance = n * p * (1 - p);
-      chartData.minX = 0;
-      chartData.maxX = n;
+      sd = Math.sqrt(Math.max(variance, 0.001));
 
+      // Ventana dinámica: rango centrado en la masa pero incluyendo x si está cerca
+      var winMin = Math.max(0, Math.floor(mean - 4 * sd));
+      var winMax = Math.min(n, Math.ceil(mean + 4 * sd));
+      if (!isNaN(x)) {
+        if (x < winMin) winMin = Math.max(0, Math.floor(x - 2));
+        if (x > winMax) winMax = Math.min(n, Math.ceil(x + 2));
+      }
+      // Asegurar mínimo de puntos para visualización
+      if (winMax - winMin < 10) {
+        winMin = Math.max(0, winMin - 5);
+        winMax = Math.min(n, winMax + 5);
+      }
+
+      chartData.minX = winMin;
+      chartData.maxX = winMax;
+
+      // Cálculo exacto de probabilidad acumulada
       for (var k = 0; k <= n; k++) {
         var p_k = Math.exp(logComb(n, k) + k * Math.log(p || 1e-10) + (n - k) * Math.log((1 - p) || 1e-10));
-        chartData.points.push({ x: k, y: p_k });
         if (evalCond(k, x, op)) prob += p_k;
+        // Solo guardamos para dibujar los que caen dentro de la ventana
+        if (k >= winMin && k <= winMax) {
+          chartData.points.push({ x: k, y: p_k });
+        }
       }
     } 
     else if (dist === "poisson") {
       var l = Math.max(0.001, getVal('p_lambda', 4));
       mean = l;
       variance = l;
-      var maxK = Math.max(Math.ceil(l + 4 * Math.sqrt(l)), Math.ceil(x || 0) + 5, 15);
-      chartData.minX = 0;
-      chartData.maxX = maxK;
+      sd = Math.sqrt(l);
 
-      for (var k2 = 0; k2 <= maxK; k2++) {
+      var winMinP = Math.max(0, Math.floor(mean - 4 * sd));
+      var winMaxP = Math.ceil(mean + 4 * sd);
+      if (!isNaN(x)) {
+        if (x < winMinP) winMinP = Math.max(0, Math.floor(x - 2));
+        if (x > winMaxP) winMaxP = Math.ceil(x + 2);
+      }
+      var evalMax = Math.max(winMaxP + 10, Math.ceil(l + 6 * sd));
+
+      chartData.minX = winMinP;
+      chartData.maxX = winMaxP;
+
+      for (var k2 = 0; k2 <= evalMax; k2++) {
         var p_k2 = Math.exp(-l + k2 * Math.log(l) - logFact(k2));
-        chartData.points.push({ x: k2, y: p_k2 });
         if (evalCond(k2, x, op)) prob += p_k2;
+        if (k2 >= winMinP && k2 <= winMaxP) {
+          chartData.points.push({ x: k2, y: p_k2 });
+        }
       }
     }
     else if (dist === "nbinom") {
@@ -314,28 +344,47 @@
       var pn = Math.max(0.001, Math.min(1, getVal('p_p', 0.4)));
       mean = (r * (1 - pn)) / pn;
       variance = (r * (1 - pn)) / (pn * pn);
-      var maxKn = Math.max(Math.ceil(mean + 3 * Math.sqrt(variance)), Math.ceil(x || 0) + 5, 20);
-      chartData.minX = 0;
-      chartData.maxX = maxKn;
+      sd = Math.sqrt(variance);
 
-      for (var k3 = 0; k3 <= maxKn; k3++) {
+      var winMinNb = Math.max(0, Math.floor(mean - 3.5 * sd));
+      var winMaxNb = Math.ceil(mean + 4 * sd);
+      if (!isNaN(x)) {
+        if (x < winMinNb) winMinNb = Math.max(0, Math.floor(x - 2));
+        if (x > winMaxNb) winMaxNb = Math.ceil(x + 2);
+      }
+      var evalMaxNb = Math.max(winMaxNb + 15, Math.ceil(mean + 6 * sd));
+
+      chartData.minX = winMinNb;
+      chartData.maxX = winMaxNb;
+
+      for (var k3 = 0; k3 <= evalMaxNb; k3++) {
         var p_k3 = Math.exp(logComb(k3 + r - 1, k3) + r * Math.log(pn) + k3 * Math.log(1 - pn));
-        chartData.points.push({ x: k3, y: p_k3 });
         if (evalCond(k3, x, op)) prob += p_k3;
+        if (k3 >= winMinNb && k3 <= winMaxNb) {
+          chartData.points.push({ x: k3, y: p_k3 });
+        }
       }
     }
     else if (dist === "geom") {
       var pg = Math.max(0.001, Math.min(1, getVal('p_p', 0.25)));
       mean = (1 - pg) / pg;
       variance = (1 - pg) / (pg * pg);
-      var maxKg = Math.max(Math.ceil(mean + 4 * Math.sqrt(variance)), Math.ceil(x || 0) + 5, 15);
-      chartData.minX = 0;
-      chartData.maxX = maxKg;
+      sd = Math.sqrt(variance);
 
-      for (var k4 = 0; k4 <= maxKg; k4++) {
+      var winMinG = 0;
+      var winMaxG = Math.ceil(mean + 4 * sd);
+      if (!isNaN(x) && x > winMaxG) winMaxG = Math.ceil(x + 2);
+      var evalMaxG = Math.max(winMaxG + 15, Math.ceil(mean + 6 * sd));
+
+      chartData.minX = winMinG;
+      chartData.maxX = winMaxG;
+
+      for (var k4 = 0; k4 <= evalMaxG; k4++) {
         var p_k4 = Math.pow(1 - pg, k4) * pg;
-        chartData.points.push({ x: k4, y: p_k4 });
         if (evalCond(k4, x, op)) prob += p_k4;
+        if (k4 >= winMinG && k4 <= winMaxG) {
+          chartData.points.push({ x: k4, y: p_k4 });
+        }
       }
     }
     else if (dist === "hyper") {
@@ -344,19 +393,27 @@
       var nh = Math.max(1, Math.min(N, Math.round(getVal('p_n', 10))));
       mean = (nh * K) / N;
       variance = nh * (K / N) * (1 - K / N) * ((N - nh) / (N - 1 || 1));
-      chartData.minX = 0;
-      chartData.maxX = nh;
+      sd = Math.sqrt(Math.max(variance, 0.001));
 
       var minKh = Math.max(0, nh - (N - K));
       var maxKh = Math.min(nh, K);
 
-      for (var k5 = 0; k5 <= nh; k5++) {
-        var p_k5 = 0;
-        if (k5 >= minKh && k5 <= maxKh) {
-          p_k5 = Math.exp(logComb(K, k5) + logComb(N - K, nh - k5) - logComb(N, nh));
-        }
-        chartData.points.push({ x: k5, y: p_k5 });
+      var winMinH = Math.max(minKh, Math.floor(mean - 4 * sd));
+      var winMaxH = Math.min(maxKh, Math.ceil(mean + 4 * sd));
+      if (!isNaN(x)) {
+        if (x < winMinH && x >= minKh) winMinH = Math.floor(x);
+        if (x > winMaxH && x <= maxKh) winMaxH = Math.ceil(x);
+      }
+
+      chartData.minX = winMinH;
+      chartData.maxX = winMaxH;
+
+      for (var k5 = minKh; k5 <= maxKh; k5++) {
+        var p_k5 = Math.exp(logComb(K, k5) + logComb(N - K, nh - k5) - logComb(N, nh));
         if (evalCond(k5, x, op)) prob += p_k5;
+        if (k5 >= winMinH && k5 <= winMaxH) {
+          chartData.points.push({ x: k5, y: p_k5 });
+        }
       }
     }
     else if (dist === "normal") {
@@ -370,9 +427,16 @@
       else if (op === "ge" || op === "gt") prob = 1 - cdf;
       else prob = (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((x - mu) / sigma, 2));
 
-      chartData.minX = mu - 3.8 * sigma;
-      chartData.maxX = mu + 3.8 * sigma;
-      var step = (chartData.maxX - chartData.minX) / 120;
+      var winMinNorm = mu - 3.8 * sigma;
+      var winMaxNorm = mu + 3.8 * sigma;
+      if (!isNaN(x)) {
+        if (x < winMinNorm) winMinNorm = x - 0.5 * sigma;
+        if (x > winMaxNorm) winMaxNorm = x + 0.5 * sigma;
+      }
+
+      chartData.minX = winMinNorm;
+      chartData.maxX = winMaxNorm;
+      var step = (chartData.maxX - chartData.minX) / 140;
       for (var v = chartData.minX; v <= chartData.maxX; v += step) {
         var density = (1 / (sigma * Math.sqrt(2 * Math.PI))) * Math.exp(-0.5 * Math.pow((v - mu) / sigma, 2));
         chartData.points.push({ x: v, y: density });
@@ -392,8 +456,8 @@
       }
 
       chartData.minX = 0;
-      chartData.maxX = 4.5 / le;
-      var stepe = chartData.maxX / 120;
+      chartData.maxX = Math.max(4.5 / le, isNaN(x) ? 0 : x + 1 / le);
+      var stepe = chartData.maxX / 140;
       for (var ve = 0; ve <= chartData.maxX; ve += stepe) {
         chartData.points.push({ x: ve, y: le * Math.exp(-le * ve) });
       }
@@ -417,8 +481,8 @@
 
       var h_dens = 1 / (b - a);
       var span = b - a;
-      chartData.minX = a - span * 0.25;
-      chartData.maxX = b + span * 0.25;
+      chartData.minX = Math.min(a - span * 0.2, isNaN(x) ? a : Math.min(a, x - span * 0.1));
+      chartData.maxX = Math.max(b + span * 0.2, isNaN(x) ? b : Math.max(b, x + span * 0.1));
 
       chartData.points = [
         { x: chartData.minX, y: 0 },
@@ -471,12 +535,14 @@
 
     var minX = data.minX;
     var maxX = data.maxX;
+    if (maxX === minX) maxX = minX + 1;
 
     var mapX = function(vx) { return padLeft + ((vx - minX) / (maxX - minX)) * plotW; };
     var mapY = function(vy) { return padTop + plotH - (vy / maxY) * plotH; };
 
     currentChartState = { isDiscrete: isDiscrete, minX: minX, maxX: maxX, padLeft: padLeft, plotW: plotW };
 
+    // Ejes cartesianos
     ctx.strokeStyle = '#475569';
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -485,6 +551,7 @@
     ctx.lineTo(padLeft + plotW, padTop + plotH);
     ctx.stroke();
 
+    // Ticks Eje Y
     ctx.fillStyle = '#94a3b8';
     ctx.font = '10px -apple-system, sans-serif';
     ctx.textAlign = 'right';
@@ -499,30 +566,37 @@
       ctx.fillText(yVals[j].toFixed(2), padLeft - 6, yCoord);
     }
 
+    // Ticks Eje X (5 valores de referencia legibles)
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    var xVals = [minX, (minX + maxX) / 2, maxX];
+    var xVals = [
+      minX,
+      minX + (maxX - minX) * 0.25,
+      (minX + maxX) / 2,
+      minX + (maxX - minX) * 0.75,
+      maxX
+    ];
     for (var k = 0; k < xVals.length; k++) {
       var xCoord = mapX(xVals[k]);
       ctx.beginPath();
       ctx.moveTo(xCoord, padTop + plotH);
       ctx.lineTo(xCoord, padTop + plotH + 4);
       ctx.stroke();
-      ctx.fillText(Number(xVals[k].toFixed(1)), xCoord, padTop + plotH + 6);
+      ctx.fillText(Number(xVals[k].toFixed(isDiscrete ? 0 : 1)), xCoord, padTop + plotH + 6);
     }
 
     if (isDiscrete) {
-      var barCount = data.points.length;
-      var barW = plotW / barCount;
+      var totalPts = data.points.length;
+      var barW = plotW / Math.max(totalPts, 1);
 
       for (var idx = 0; idx < data.points.length; idx++) {
         var pt = data.points[idx];
         var barH = (pt.y / maxY) * plotH;
-        var bx = padLeft + (pt.x - minX) * barW;
+        var bx = mapX(pt.x) - barW / 2;
         var by = padTop + plotH - barH;
 
         ctx.fillStyle = evalCond(pt.x, targetX, op) ? '#38bdf8' : '#334155';
-        ctx.fillRect(bx + 1, by, Math.max(barW - 2, 2), barH);
+        ctx.fillRect(Math.max(bx, padLeft), by, Math.max(barW - 1, 1.5), barH);
       }
     } else {
       ctx.fillStyle = 'rgba(56, 189, 248, 0.35)';
@@ -579,18 +653,19 @@
       ctx.strokeStyle = '#38bdf8';
       ctx.lineWidth = 2;
       ctx.stroke();
+    }
 
-      if (targetX >= minX && targetX <= maxX) {
-        var px = mapX(targetX);
-        ctx.strokeStyle = '#facc15';
-        ctx.lineWidth = 1.5;
-        ctx.setLineDash([4, 3]);
-        ctx.beginPath();
-        ctx.moveTo(px, padTop);
-        ctx.lineTo(px, padTop + plotH);
-        ctx.stroke();
-        ctx.setLineDash([]);
-      }
+    // Marcador vertical interactivo
+    if (targetX >= minX && targetX <= maxX) {
+      var px = mapX(targetX);
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      ctx.moveTo(px, padTop);
+      ctx.lineTo(px, padTop + plotH);
+      ctx.stroke();
+      ctx.setLineDash([]);
     }
   }
 
@@ -658,7 +733,6 @@
   document.getElementById('select-op').addEventListener('change', calculate);
   document.getElementById('input-x').addEventListener('input', calculate);
 
-  // Inicialización directa
   try {
     renderParamInputs();
     calculate();
