@@ -32,7 +32,7 @@
 
     .results { background: #0f172a; border-radius: 10px; padding: 12px; margin: 14px 0; border-left: 4px solid #38bdf8; }
     .result-main { font-size: 1.15rem; font-weight: bold; color: #38bdf8; margin-bottom: 6px; }
-    .result-sub { font-size: 0.8rem; color: #94a3b8; display: flex; justify-content: space-between; }
+    .result-sub { font-size: 0.8rem; color: #94a3b8; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
     
     .canvas-container { position: relative; width: 100%; }
     canvas { width: 100%; height: 210px; background: #0f172a; border-radius: 8px; touch-action: none; cursor: crosshair; }
@@ -83,6 +83,9 @@
         <option value="normal">Normal</option>
         <option value="uniform">Uniforme Continua</option>
         <option value="expon">Exponencial</option>
+        <option value="gamma">Gamma</option>
+        <option value="chisq">Chi-cuadrado (χ²)</option>
+        <option value="tstud">t de Student</option>
       </optgroup>
     </select>
   </div>
@@ -111,6 +114,7 @@
     <div class="result-sub">
       <span id="mean-output">E[X] = -</span>
       <span id="var-output">Var(X) = -</span>
+      <span id="mode-output">Mo = -</span>
     </div>
   </div>
 
@@ -119,7 +123,6 @@
   </div>
 </div>
 
-<!-- Modal explicativo de fórmulas -->
 <div class="modal-backdrop" id="help-modal">
   <div class="modal-box">
     <div class="modal-title">
@@ -130,7 +133,6 @@
   </div>
 </div>
 
-<!-- Modal de créditos y autoría -->
 <div class="modal-backdrop" id="about-modal">
   <div class="modal-box">
     <div class="modal-title">
@@ -151,49 +153,67 @@
       name: "Distribución Binomial",
       desc: "Número de éxitos en n pruebas de Bernoulli independientes, con probabilidad constante de éxito p y q = 1 - p.",
       formula: "b(x; n; p) = \\binom{n}{x} p^x q^{n-x} \\quad (x = 0, 1, \\dots, n)",
-      moments: "\\mu = n \\cdot p \\quad | \\quad \\sigma^2 = n \\cdot p \\cdot q"
+      moments: "\\mu = np, \\quad \\sigma^2 = npq, \\quad \\text{Mo} = \\lfloor (n+1)p \\rfloor"
     },
     poisson: {
       name: "Distribución de Poisson",
-      desc: "Número de resultados que ocurren durante un intervalo de tiempo dado o región específica a tasa promedio constante λ.",
+      desc: "Número de resultados que ocurren durante un intervalo continuo a tasa promedio constante λ.",
       formula: "p(x; \\lambda) = \\frac{e^{-\\lambda} \\lambda^x}{x!} \\quad (x = 0, 1, 2, \\dots)",
-      moments: "\\mu = \\lambda \\quad | \\quad \\sigma^2 = \\lambda"
+      moments: "\\mu = \\lambda, \\quad \\sigma^2 = \\lambda, \\quad \\text{Mo} = \\lfloor \\lambda \\rfloor"
     },
     nbinom: {
       name: "Distribución Binomial Negativa (Pascal)",
       desc: "Número de ensayos x necesarios para obtener exactamente k aciertos en procesos de Bernoulli independientes.",
       formula: "b^*(x; k; p) = \\binom{x - 1}{k - 1} p^k q^{x - k} \\quad (x = k, k+1, \\dots)",
-      moments: "\\mu = \\frac{k}{p} \\quad | \\quad \\sigma^2 = \\frac{k \\cdot q}{p^2}"
+      moments: "\\mu = \\frac{k}{p}, \\quad \\sigma^2 = \\frac{kq}{p^2}, \\quad \\text{Mo} = \\left\\lfloor \\frac{(k-1)q}{p} \\right\\rfloor + k"
     },
     geom: {
       name: "Distribución Geométrica",
-      desc: "Número de veces x que se debe realizar el experimento hasta obtener el primer éxito (progresión geométrica de razón q).",
+      desc: "Número de pruebas x hasta obtener el primer éxito (progresión geométrica de razón q).",
       formula: "g(x; p) = p \\cdot q^{x - 1} \\quad (x = 1, 2, 3, \\dots)",
-      moments: "\\mu = \\frac{1}{p} \\quad | \\quad \\sigma^2 = \\frac{q}{p^2}"
+      moments: "\\mu = \\frac{1}{p}, \\quad \\sigma^2 = \\frac{q}{p^2}, \\quad \\text{Mo} = 1"
     },
     hyper: {
       name: "Distribución Hipergeométrica",
-      desc: "Número de éxitos x en una muestra aleatoria n extraída SIN reemplazo de una población N con k éxitos.",
+      desc: "Número de éxitos x en muestra n seleccionada SIN reemplazo de población N con k éxitos.",
       formula: "h(x; N; n; k) = \\frac{\\binom{k}{x} \\binom{N - k}{n - x}}{\\binom{N}{n}} \\quad (x = 0, 1, \\dots, n)",
-      moments: "\\mu = \\frac{n \\cdot k}{N} \\quad | \\quad \\sigma^2 = \\frac{N - n}{N - 1} \\cdot n \\cdot \\frac{k}{N} \\left(1 - \\frac{k}{N}\\right)"
+      moments: "\\mu = \\frac{nk}{N}, \\quad \\sigma^2 = \\frac{N-n}{N-1} n \\frac{k}{N}\\left(1 - \\frac{k}{N}\\right), \\quad \\text{Mo} = \\left\\lfloor \\frac{(k+1)(n+1)}{N+2} \\right\\rfloor"
     },
     normal: {
       name: "Distribución Normal (Gauss)",
-      desc: "Función de densidad continua simétrica respecto a μ con puntos de inflexión en μ ± σ.",
+      desc: "Densidad continua simétrica respecto a μ con puntos de inflexión en μ ± σ.",
       formula: "n(x; \\mu; \\sigma) = \\frac{1}{\\sqrt{2\\pi}\\,\\sigma} \\, e^{-\\frac{1}{2}\\left(\\frac{x - \\mu}{\\sigma}\\right)^2} \\quad (x \\in \\mathbb{R})",
-      moments: "\\mu = E[X] \\quad | \\quad \\sigma^2 = \\text{Var}(X)"
+      moments: "\\mu = E[X], \\quad \\sigma^2 = \\text{Var}(X), \\quad \\text{Mo} = \\mu"
     },
     uniform: {
       name: "Distribución Uniforme Continua (Rectangular)",
       desc: "Densidad constante de base B - A y altura 1 / (B - A) sobre el intervalo [A, B].",
       formula: "f(x; A; B) = \\frac{1}{B - A} \\quad (A \\le x \\le B)",
-      moments: "\\mu = \\frac{A + B}{2} \\quad | \\quad \\sigma^2 = \\frac{(B - A)^2}{12}"
+      moments: "\\mu = \\frac{A + B}{2}, \\quad \\sigma^2 = \\frac{(B - A)^2}{12}, \\quad \\text{Mo: No única}"
     },
     expon: {
       name: "Distribución Exponencial",
-      desc: "Modela el tiempo continuo transcurrido hasta el próximo evento en un proceso de Poisson con tasa λ > 0.",
+      desc: "Tiempo continuo transcurrido hasta el próximo evento de un proceso de Poisson con tasa λ > 0.",
       formula: "f(x) = \\lambda e^{-\\lambda x} \\quad (x \\ge 0)",
-      moments: "\\mu = \\frac{1}{\\lambda} \\quad | \\quad \\sigma^2 = \\frac{1}{\\lambda^2}"
+      moments: "\\mu = \\frac{1}{\\lambda}, \\quad \\sigma^2 = \\frac{1}{\\lambda^2}, \\quad \\text{Mo} = 0"
+    },
+    gamma: {
+      name: "Distribución Gamma",
+      desc: "Modela tiempos de espera hasta la ocurrencia de α eventos en un proceso de Poisson con tasa β.",
+      formula: "f(x; \\alpha, \\beta) = \\frac{\\beta^\\alpha}{\\Gamma(\\alpha)} x^{\\alpha - 1} e^{-\\beta x} \\quad (x > 0)",
+      moments: "\\mu = \\frac{\\alpha}{\\beta}, \\quad \\sigma^2 = \\frac{\\alpha}{\\beta^2}, \\quad \\text{Mo} = \\frac{\\alpha - 1}{\\beta} \\; (\\alpha \\ge 1)"
+    },
+    chisq: {
+      name: "Distribución Chi-cuadrado (χ²)",
+      desc: "Distribución con ν grados de libertad. Suma de los cuadrados de ν variables normales independientes.",
+      formula: "f(x; \\nu) = \\frac{1}{2^{\\nu/2} \\Gamma(\\nu/2)} x^{(\\nu/2)-1} e^{-x/2} \\quad (x > 0)",
+      moments: "\\mu = \\nu, \\quad \\sigma^2 = 2\\nu, \\quad \\text{Mo} = \\max(0, \\nu - 2)"
+    },
+    tstud: {
+      name: "Distribución t de Student",
+      desc: "Cociente entre una normal estándar y la raíz de una χ² independiente dividida por sus grados de libertad ν.",
+      formula: "f(t; \\nu) = \\frac{\\Gamma\\left(\\frac{\\nu+1}{2}\\right)}{\\sqrt{\\nu\\pi}\\,\\Gamma\\left(\\frac{\\nu}{2}\\right)} \\left(1 + \\frac{t^2}{\\nu}\\right)^{-\\frac{\\nu+1}{2}}",
+      moments: "\\mu = 0 \\;(\\nu > 1), \\quad \\sigma^2 = \\frac{\\nu}{\\nu - 2} \\;(\\nu > 2), \\quad \\text{Mo} = 0"
     }
   };
 
@@ -237,12 +257,46 @@
     return 0.5 * (1 + erf((x - mu) / (sigma * Math.sqrt(2))));
   }
 
+  function integrateSimp(f, a, b, n) {
+    if (b <= a) return 0;
+    var steps = n || 60;
+    if (steps % 2 !== 0) steps++;
+    var h = (b - a) / steps;
+    var sum = f(a) + f(b);
+    for (var i = 1; i < steps; i++) {
+      var x = a + i * h;
+      sum += (i % 2 === 0 ? 2 : 4) * f(x);
+    }
+    return Math.max(0, Math.min(1, (sum * h) / 3));
+  }
+
+  function gammaPDF(x, alpha, beta) {
+    if (x <= 0) return 0;
+    var logNum = alpha * Math.log(beta) + (alpha - 1) * Math.log(x) - beta * x;
+    var logDen = logGamma(alpha);
+    return Math.exp(logNum - logDen);
+  }
+
+  function chiSqPDF(x, v) {
+    if (x <= 0) return 0;
+    var logNum = ((v / 2) - 1) * Math.log(x) - (x / 2);
+    var logDen = (v / 2) * Math.log(2) + logGamma(v / 2);
+    return Math.exp(logNum - logDen);
+  }
+
+  function tStudentPDF(t, v) {
+    var logC = logGamma((v + 1) / 2) - (0.5 * Math.log(v * Math.PI) + logGamma(v / 2));
+    var logBase = -((v + 1) / 2) * Math.log(1 + (t * t) / v);
+    return Math.exp(logC + logBase);
+  }
+
   function renderParamInputs() {
     var dist = document.getElementById('select-dist').value;
     var container = document.getElementById('container-params');
     var opSelect = document.getElementById('select-op');
     
-    if (dist === "normal" || dist === "expon" || dist === "uniform") {
+    var isCont = (dist === "normal" || dist === "uniform" || dist === "expon" || dist === "gamma" || dist === "chisq" || dist === "tstud");
+    if (isCont) {
       opSelect.querySelector('option[value="eq"]').text = "Densidad f(x)";
     } else {
       opSelect.querySelector('option[value="eq"]').text = "P(X = x)";
@@ -271,6 +325,13 @@
              '<div><label>Límite superior (B)</label><input type="number" id="p_B" value="10" step="any"></div>';
     } else if (dist === "expon") {
       html = '<div class="full-col"><label>Tasa (λ)</label><input type="number" id="p_lambda" value="1.5" min="0.001" step="any"></div>';
+    } else if (dist === "gamma") {
+      html = '<div><label>Forma (α)</label><input type="number" id="p_alpha" value="3" min="0.1" step="0.5"></div>' +
+             '<div><label>Tasa (β)</label><input type="number" id="p_beta" value="1" min="0.001" step="0.2"></div>';
+    } else if (dist === "chisq") {
+      html = '<div class="full-col"><label>Grados de libertad (ν)</label><input type="number" id="p_nu" value="5" min="1" step="1"></div>';
+    } else if (dist === "tstud") {
+      html = '<div class="full-col"><label>Grados de libertad (ν)</label><input type="number" id="p_nu_t" value="10" min="1" step="1"></div>';
     }
     container.innerHTML = html;
   }
@@ -291,8 +352,8 @@
     var op = document.getElementById('select-op').value;
     var x = getVal('input-x', 0);
 
-    var prob = 0, mean = 0, variance = 0, sd = 1;
-    var isDiscrete = !(dist === "normal" || dist === "expon" || dist === "uniform");
+    var prob = 0, mean = 0, variance = 0, mode = "-", sd = 1;
+    var isDiscrete = !(dist === "normal" || dist === "uniform" || dist === "expon" || dist === "gamma" || dist === "chisq" || dist === "tstud");
     var chartData = { type: isDiscrete ? 'discrete' : 'continuous', points: [], minX: 0, maxX: 1 };
     var extraParams = {};
 
@@ -302,6 +363,7 @@
       var q = 1 - p;
       mean = n * p;
       variance = n * p * q;
+      mode = Math.floor((n + 1) * p);
       sd = Math.sqrt(Math.max(variance, 0.001));
 
       var winMin = Math.max(0, Math.floor(mean - 3.5 * sd));
@@ -331,6 +393,7 @@
       var l = Math.max(0.001, getVal('p_lambda', 4));
       mean = l;
       variance = l;
+      mode = Math.floor(l);
       sd = Math.sqrt(l);
 
       var winMinP = Math.max(0, Math.floor(mean - 3.5 * sd));
@@ -360,6 +423,7 @@
       var qn = 1 - pn;
       mean = kTarget / pn;
       variance = (kTarget * qn) / (pn * pn);
+      mode = Math.floor(((kTarget - 1) * qn) / pn) + kTarget;
       sd = Math.sqrt(variance);
 
       var winMinNb = Math.max(kTarget, Math.floor(mean - 3.5 * sd));
@@ -388,6 +452,7 @@
       var qg = 1 - pg;
       mean = 1 / pg;
       variance = qg / (pg * pg);
+      mode = 1;
       sd = Math.sqrt(variance);
 
       var winMinG = 1;
@@ -417,6 +482,7 @@
       var nh = Math.max(1, Math.min(N, Math.round(getVal('p_n', 10))));
       mean = (nh * kSucc) / N;
       variance = ((N - nh) / (N - 1 || 1)) * nh * (kSucc / N) * (1 - kSucc / N);
+      mode = Math.floor(((kSucc + 1) * (nh + 1)) / (N + 2));
       sd = Math.sqrt(Math.max(variance, 0.001));
 
       var minKh = Math.max(0, nh - (N - kSucc));
@@ -450,6 +516,7 @@
       var sigma = Math.max(0.001, getVal('p_sigma', 1));
       mean = mu;
       variance = sigma * sigma;
+      mode = mu.toFixed(2);
 
       var cdf = normalCDF(x, mu, sigma);
       if (op === "le" || op === "lt") prob = cdf;
@@ -478,6 +545,7 @@
       if (B <= A) B = A + 1;
       mean = (A + B) / 2;
       variance = Math.pow(B - A, 2) / 12;
+      mode = "No única";
       extraParams = { A: A, B: B };
 
       if (x < A) prob = (op === "le" || op === "lt") ? 0 : 1;
@@ -512,6 +580,7 @@
       var le = Math.max(0.001, getVal('p_lambda', 1.5));
       mean = 1 / le;
       variance = 1 / (le * le);
+      mode = 0;
 
       if (x < 0) prob = (op === "le" || op === "lt") ? 0 : 1;
       else {
@@ -534,13 +603,109 @@
         chartData.points.push({ x: ve, y: le * Math.exp(-le * ve) });
       }
     }
+    else if (dist === "gamma") {
+      var alpha = Math.max(0.1, getVal('p_alpha', 3));
+      var beta = Math.max(0.001, getVal('p_beta', 1));
+      mean = alpha / beta;
+      variance = alpha / (beta * beta);
+      mode = alpha >= 1 ? ((alpha - 1) / beta).toFixed(2) : 0;
+      sd = Math.sqrt(variance);
+
+      var pdfGamma = function(val) { return gammaPDF(val, alpha, beta); };
+      if (op === "eq") {
+        prob = pdfGamma(x);
+      } else {
+        var cdfG = (x <= 0) ? 0 : integrateSimp(pdfGamma, 1e-4, x, 80);
+        if (op === "le" || op === "lt") prob = cdfG;
+        else prob = 1 - cdfG;
+      }
+
+      var winMaxG = Math.max(mean + 3.8 * sd, 4 / beta);
+      if (isParamChange && (x < 0 || x > winMaxG)) {
+        x = parseFloat(mean.toFixed(2));
+        document.getElementById('input-x').value = x;
+      }
+
+      chartData.minX = 0;
+      chartData.maxX = winMaxG;
+      var stepG = chartData.maxX / 140;
+      for (var vg = 0; vg <= chartData.maxX; vg += stepG) {
+        chartData.points.push({ x: vg, y: pdfGamma(vg) });
+      }
+    }
+    else if (dist === "chisq") {
+      var nu = Math.max(1, Math.round(getVal('p_nu', 5)));
+      mean = nu;
+      variance = 2 * nu;
+      mode = nu >= 2 ? (nu - 2) : 0;
+      sd = Math.sqrt(variance);
+
+      var pdfChi = function(val) { return chiSqPDF(val, nu); };
+      if (op === "eq") {
+        prob = pdfChi(x);
+      } else {
+        var cdfChi = (x <= 0) ? 0 : integrateSimp(pdfChi, 1e-4, x, 80);
+        if (op === "le" || op === "lt") prob = cdfChi;
+        else prob = 1 - cdfChi;
+      }
+
+      var winMaxChi = Math.max(nu + 3.8 * sd, 8);
+      if (isParamChange && (x < 0 || x > winMaxChi)) {
+        x = Math.round(mean);
+        document.getElementById('input-x').value = x;
+      }
+
+      chartData.minX = 0;
+      chartData.maxX = winMaxChi;
+      var stepChi = chartData.maxX / 140;
+      for (var vc = 0; vc <= chartData.maxX; vc += stepChi) {
+        chartData.points.push({ x: vc, y: pdfChi(vc) });
+      }
+    }
+    else if (dist === "tstud") {
+      var nuT = Math.max(1, Math.round(getVal('p_nu_t', 10)));
+      mean = nuT > 1 ? 0 : "Indet.";
+      variance = nuT > 2 ? (nuT / (nuT - 2)) : (nuT > 1 ? "∞" : "Indet.");
+      mode = 0;
+      var effSD = (nuT > 2) ? Math.sqrt(nuT / (nuT - 2)) : 1.5;
+
+      var pdfT = function(val) { return tStudentPDF(val, nuT); };
+      if (op === "eq") {
+        prob = pdfT(x);
+      } else {
+        var winBound = 5 * effSD;
+        var cdfT = 0;
+        if (x <= -winBound) cdfT = 0;
+        else if (x >= winBound) cdfT = 1;
+        else if (x < 0) cdfT = 0.5 - integrateSimp(pdfT, x, 0, 80);
+        else cdfT = 0.5 + integrateSimp(pdfT, 0, x, 80);
+
+        if (op === "le" || op === "lt") prob = cdfT;
+        else prob = 1 - cdfT;
+      }
+
+      var winMaxT = 3.8 * effSD;
+      if (isParamChange && (x < -winMaxT || x > winMaxT)) {
+        x = 0;
+        document.getElementById('input-x').value = x;
+      }
+
+      chartData.minX = -winMaxT;
+      chartData.maxX = winMaxT;
+      var stepT = (2 * winMaxT) / 140;
+      for (var vt = -winMaxT; vt <= winMaxT; vt += stepT) {
+        chartData.points.push({ x: vt, y: pdfT(vt) });
+      }
+    }
 
     var opSym = { eq: '=', le: '≤', ge: '≥', lt: '<', gt: '>' }[op];
     document.getElementById('prob-output').innerText = (isDiscrete || op !== 'eq') 
       ? "P(X " + opSym + " " + x + ") = " + prob.toFixed(5)
       : "f(" + x + ") = " + prob.toFixed(5);
-    document.getElementById('mean-output').innerText = "E[X] = " + mean.toFixed(2);
-    document.getElementById('var-output').innerText = "Var(X) = " + variance.toFixed(2);
+    
+    document.getElementById('mean-output').innerText = "E[X] = " + (typeof mean === "number" ? mean.toFixed(2) : mean);
+    document.getElementById('var-output').innerText = "Var(X) = " + (typeof variance === "number" ? variance.toFixed(2) : variance);
+    document.getElementById('mode-output').innerText = "Mo = " + mode;
 
     draw(chartData, x, op, isDiscrete, dist, extraParams);
   }
@@ -741,7 +906,6 @@
     e.preventDefault();
   }, { passive: false });
 
-  // Modales
   var helpModal = document.getElementById('help-modal');
   var aboutModal = document.getElementById('about-modal');
 
@@ -753,7 +917,7 @@
       '<p><strong>¿Qué calcula?</strong><br>' + info.desc + '</p>' +
       '<label>Función de masa / densidad:</label>' +
       '<div class="formula-container" id="formula-katex"></div>' +
-      '<label>Esperanza y Varianza:</label>' +
+      '<label>Parámetros centrales (Esperanza, Varianza y Moda):</label>' +
       '<div class="formula-container" id="moments-katex"></div>';
 
     if (window.katex) {
